@@ -1,0 +1,105 @@
+/**
+ * Local Storage Pluggable Database Layer for Shivam Roy Oils
+ * Pre-seeded with authentic store inventory, past 7 days of transactions,
+ * and store settings. Can be easily swapped with Supabase, Firebase, or a REST API.
+ */
+
+const STORAGE_KEYS = {
+  INVENTORY: 'shivamroyoils_inventory_v1',
+  BILLS: 'shivamroyoils_bills_v1',
+  SETTINGS: 'shivamroyoils_settings_v1',
+  USERS: 'shivamroyoils_users_v1',
+};
+
+// Default Static UPI QR SVG as data URI
+const DEFAULT_UPI_QR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' width='200' height='200'><rect width='200' height='200' fill='%23ffffff'/><rect x='20' y='20' width='50' height='50' fill='%231c1917'/><rect x='30' y='30' width='30' height='30' fill='%23ffffff'/><rect x='35' y='35' width='20' height='20' fill='%23d97706'/><rect x='130' y='20' width='50' height='50' fill='%231c1917'/><rect x='140' y='30' width='30' height='30' fill='%23ffffff'/><rect x='145' y='35' width='20' height='20' fill='%23d97706'/><rect x='20' y='130' width='50' height='50' fill='%231c1917'/><rect x='30' y='140' width='30' height='30' fill='%23ffffff'/><rect x='35' y='145' width='20' height='20' fill='%23d97706'/><rect x='85' y='25' width='30' height='15' fill='%231c1917'/><rect x='95' y='50' width='20' height='25' fill='%23d97706'/><rect x='85' y='85' width='30' height='30' fill='%231c1917'/><rect x='25' y='85' width='45' height='25' fill='%231c1917'/><rect x='130' y='85' width='25' height='40' fill='%231c1917'/><rect x='165' y='85' width='15' height='25' fill='%23d97706'/><rect x='85' y='130' width='20' height='45' fill='%231c1917'/><rect x='120' y='140' width='40' height='20' fill='%231c1917'/><rect x='145' y='165' width='25' height='15' fill='%23d97706'/><text x='100' y='195' font-family='sans-serif' font-size='9' text-anchor='middle' fill='%2378350f' font-weight='bold'>UPI SCAN &amp; PAY</text></svg>";
+
+const SEED_SETTINGS = {
+  id: 'settings_default',
+  store_name: 'Shivam Roy Oils',
+  tagline: 'Farm-Fresh Cold Pressed Oils & Spices',
+  upi_vpa: 'shivamroyoils@upi',
+  upi_qr_image_url: DEFAULT_UPI_QR,
+  address: 'Shop 14, Kisan Mandi Complex, Ring Road',
+  phone: '+91 98765 01234',
+  low_stock_threshold: 10,
+  tax_rate: 0
+};
+
+const SEED_INVENTORY = [];
+
+// Helper to generate ISO timestamps for past N days
+function getPastDate(daysAgo, hour = 14, min = 30) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  d.setHours(hour, min, 0, 0);
+  return d.toISOString();
+}
+
+const SEED_BILLS = [];
+
+const SEED_USERS = [
+  {
+    id: 'user_1',
+    name: 'Store Admin',
+    username: 'admin',
+    password: 'password123',
+    role: 'admin',
+    security_question: 'What is your favorite color?',
+    security_answer: 'blue',
+    created_at: new Date().toISOString()
+  }
+];
+
+export class LocalStorageDB {
+  static get(key, defaultValue = null) {
+    try {
+      const item = localStorage.getItem(key);
+      if (item === null) return defaultValue;
+      return JSON.parse(item);
+    } catch (err) {
+      console.error(`Error reading ${key} from storage:`, err);
+      return defaultValue;
+    }
+  }
+
+  static set(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (err) {
+      console.error(`Error writing ${key} to storage:`, err);
+    }
+  }
+
+  /**
+   * Initializes local database with seed data if not present
+   */
+  static init() {
+    if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
+      LocalStorageDB.set(STORAGE_KEYS.SETTINGS, SEED_SETTINGS);
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.INVENTORY)) {
+      LocalStorageDB.set(STORAGE_KEYS.INVENTORY, SEED_INVENTORY);
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.BILLS)) {
+      LocalStorageDB.set(STORAGE_KEYS.BILLS, SEED_BILLS);
+    }
+    const existingUsers = LocalStorageDB.get(STORAGE_KEYS.USERS, null);
+    if (!existingUsers || !Array.isArray(existingUsers) || existingUsers.length === 0) {
+      LocalStorageDB.set(STORAGE_KEYS.USERS, SEED_USERS);
+    }
+  }
+
+  /**
+   * Resets database back to default seed data
+   */
+  static resetToSeed() {
+    LocalStorageDB.set(STORAGE_KEYS.SETTINGS, SEED_SETTINGS);
+    LocalStorageDB.set(STORAGE_KEYS.INVENTORY, SEED_INVENTORY);
+    LocalStorageDB.set(STORAGE_KEYS.BILLS, SEED_BILLS);
+    LocalStorageDB.set(STORAGE_KEYS.USERS, SEED_USERS);
+    return true;
+  }
+}
+
+export { STORAGE_KEYS, SEED_SETTINGS, SEED_INVENTORY, SEED_BILLS, SEED_USERS, DEFAULT_UPI_QR };
