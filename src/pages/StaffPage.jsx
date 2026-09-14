@@ -59,8 +59,7 @@ export function StaffPage() {
         items: buildBillItems(cartItemsList, inventory),
         num_items: billMeta.num_items,
         subtotal: billMeta.subtotal,
-        // Staff Rule: 0 discount
-        discount_amount: 0,
+        discount_amount: billMeta.discount_amount || 0,
         total_amount: billMeta.total_amount,
         payment_method: billMeta.payment_method,
         cash_given: billMeta.cash_given,
@@ -102,7 +101,7 @@ export function StaffPage() {
               Staff Cashier Counter
             </h1>
             <p className="text-xs text-stone-500">
-              High-speed retail counter interface • Retail billing without discounts
+              High-speed retail counter interface • Manual discounts &amp; instant billing
             </p>
           </div>
         </div>

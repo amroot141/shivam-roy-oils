@@ -1,28 +1,28 @@
 import { LocalStorageDB, STORAGE_KEYS } from './db';
-import { db, collection, doc, getDocs, setDoc, deleteDoc, updateDoc } from './firebase';
+import { db, collection, doc, getDocs, setDoc, deleteDoc, withTimeout } from './firebase';
 
 /**
  * Inventory Service
- * Abstracted interface for all product and stock operations with Firebase Firestore sync.
+ * Instant local cache reads with fast non-blocking Firestore sync.
  */
 export const inventoryService = {
   /**
-   * Fetches all inventory items (synced with Firestore)
+   * Fetches all inventory items (instant local first, background sync)
    * @returns {Promise<Array<Object>>}
    */
   async getInventory() {
     LocalStorageDB.init();
-    try {
-      const snap = await getDocs(collection(db, 'inventory'));
-      if (!snap.empty) {
-        const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        LocalStorageDB.set(STORAGE_KEYS.INVENTORY, items);
-        return items;
-      }
-    } catch (err) {
-      console.warn('Firestore offline/fallback for inventory:', err.message);
+    const local = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
+
+    // Try fast Firestore fetch (max 600ms timeout)
+    const snap = await withTimeout(getDocs(collection(db, 'inventory')), 600, null);
+    if (snap && !snap.empty) {
+      const remoteItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      LocalStorageDB.set(STORAGE_KEYS.INVENTORY, remoteItems);
+      return remoteItems;
     }
-    return LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
+
+    return local;
   },
 
   /**
@@ -41,7 +41,7 @@ export const inventoryService = {
    * @returns {Promise<Object>}
    */
   async addProduct(product) {
-    const list = await this.getInventory();
+    const list = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
     const newProduct = {
       id: `prod-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
       product_name: String(product.product_name || '').trim(),
@@ -55,15 +55,15 @@ export const inventoryService = {
       throw new Error('Product name is required');
     }
 
-    // Write to Firestore
-    try {
-      await setDoc(doc(db, 'inventory', newProduct.id), newProduct);
-    } catch (err) {
-      console.warn('Firestore write failed, saving locally:', err.message);
-    }
-
+    // Instant local save
     list.unshift(newProduct);
     LocalStorageDB.set(STORAGE_KEYS.INVENTORY, list);
+
+    // Non-blocking Firestore write
+    setDoc(doc(db, 'inventory', newProduct.id), newProduct).catch(err => 
+      console.warn('Firestore write queued locally:', err.message)
+    );
+
     return newProduct;
   },
 
@@ -74,7 +74,7 @@ export const inventoryService = {
    * @returns {Promise<Object>}
    */
   async updateProduct(id, updates) {
-    const list = await this.getInventory();
+    const list = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
     const index = list.findIndex(p => p.id === id);
     if (index === -1) {
       throw new Error(`Product with ID "${id}" not found`);
@@ -84,7 +84,7 @@ export const inventoryService = {
     const updated = {
       ...current,
       ...updates,
-      id: current.id, // Immutable ID
+      id: current.id,
       product_name: updates.product_name !== undefined ? String(updates.product_name).trim() : current.product_name,
       unit: updates.unit || current.unit,
       stock_quantity: updates.stock_quantity !== undefined ? Math.max(0, parseInt(updates.stock_quantity, 10)) : current.stock_quantity,
@@ -92,15 +92,15 @@ export const inventoryService = {
       discount_percent: updates.discount_percent !== undefined ? Math.min(100, Math.max(0, parseFloat(updates.discount_percent))) : current.discount_percent
     };
 
-    // Update in Firestore
-    try {
-      await setDoc(doc(db, 'inventory', id), updated);
-    } catch (err) {
-      console.warn('Firestore update failed, saving locally:', err.message);
-    }
-
+    // Instant local save
     list[index] = updated;
     LocalStorageDB.set(STORAGE_KEYS.INVENTORY, list);
+
+    // Non-blocking Firestore update
+    setDoc(doc(db, 'inventory', id), updated).catch(err => 
+      console.warn('Firestore update queued locally:', err.message)
+    );
+
     return updated;
   },
 
@@ -110,30 +110,31 @@ export const inventoryService = {
    * @returns {Promise<boolean>}
    */
   async deleteProduct(id) {
-    const list = await this.getInventory();
+    const list = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
     const filtered = list.filter(p => p.id !== id);
     if (filtered.length === list.length) {
       return false;
     }
 
-    try {
-      await deleteDoc(doc(db, 'inventory', id));
-    } catch (err) {
-      console.warn('Firestore delete failed:', err.message);
-    }
-
+    // Instant local update
     LocalStorageDB.set(STORAGE_KEYS.INVENTORY, filtered);
+
+    // Non-blocking Firestore delete
+    deleteDoc(doc(db, 'inventory', id)).catch(err => 
+      console.warn('Firestore delete queued locally:', err.message)
+    );
+
     return true;
   },
 
   /**
-   * Adjusts stock quantity for a product (e.g. restock or manual delta)
+   * Adjusts stock quantity for a product
    * @param {string} id
    * @param {number} delta
    * @returns {Promise<Object>}
    */
   async adjustStock(id, delta) {
-    const list = await this.getInventory();
+    const list = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
     const product = list.find(p => p.id === id);
     if (!product) throw new Error('Product not found');
 
@@ -147,18 +148,16 @@ export const inventoryService = {
    * @returns {Promise<boolean>}
    */
   async decrementStockForBill(items = []) {
-    const list = await this.getInventory();
+    const list = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
     const map = new Map(list.map(p => [p.id, { ...p }]));
 
     for (const item of items) {
       const prod = map.get(item.product_id);
       if (prod) {
         prod.stock_quantity = Math.max(0, prod.stock_quantity - (Number(item.quantity) || 0));
-        try {
-          await setDoc(doc(db, 'inventory', prod.id), prod);
-        } catch (err) {
-          console.warn('Firestore stock decrement sync failed:', err.message);
-        }
+        setDoc(doc(db, 'inventory', prod.id), prod).catch(err => 
+          console.warn('Firestore stock sync queued:', err.message)
+        );
       }
     }
 

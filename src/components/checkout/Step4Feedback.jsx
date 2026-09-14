@@ -18,6 +18,7 @@ export function Step4Feedback({
   setFeedback, 
   cartItemsList = [], 
   paymentInfo, 
+  isDiscountEnabled = true,
   onSubmitBill, 
   onPrev,
   submitting = false
@@ -25,7 +26,7 @@ export function Step4Feedback({
   const [unlocked, setUnlocked] = useState(feedback === 'good' || feedback === 'bad');
 
   const subtotal = cartSubtotal(cartItemsList);
-  const discount = cartDiscount(cartItemsList, feedback);
+  const discount = cartDiscount(cartItemsList, feedback, isDiscountEnabled);
   const total = cartTotal(subtotal, discount);
 
   // Recalculate change returned based on the post-discount total
@@ -50,7 +51,9 @@ export function Step4Feedback({
     setFeedback(sentiment);
     if (sentiment === 'good' || sentiment === 'bad') {
       setUnlocked(true);
-      triggerConfetti();
+      if (isDiscountEnabled) {
+        triggerConfetti();
+      }
     } else {
       setUnlocked(false);
     }
@@ -66,10 +69,12 @@ export function Step4Feedback({
             <Gift size={24} className="animate-bounce" />
           </div>
           <h2 className="text-2xl font-bold text-stone-900 font-heading">
-            Feedback &amp; Instant Savings
+            {isDiscountEnabled ? 'Feedback & Instant Savings' : 'Customer Feedback'}
           </h2>
           <p className="text-sm text-stone-500 mt-1 max-w-md mx-auto">
-            Rate your store shopping experience today to unlock instant product-level discounts on your bill!
+            {isDiscountEnabled
+              ? 'Rate your store shopping experience today to unlock instant product-level discounts on your bill!'
+              : 'Rate your store shopping experience today to help us serve you better!'}
           </p>
         </div>
 
@@ -92,7 +97,7 @@ export function Step4Feedback({
             </div>
             <span className="font-bold text-sm text-stone-900">Good Shopping</span>
             <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-100/80 px-2 py-0.5 rounded-full">
-              Unlocks Full Discount
+              {isDiscountEnabled ? 'Unlocks Full Discount' : 'Feedback Recorded'}
             </span>
           </button>
 
@@ -113,15 +118,18 @@ export function Step4Feedback({
             </div>
             <span className="font-bold text-sm text-stone-900">Needs Work</span>
             <span className="text-[11px] text-amber-800 font-semibold bg-amber-100/80 px-2 py-0.5 rounded-full">
-              Unlocks Full Discount
+              {isDiscountEnabled ? 'Unlocks Full Discount' : 'Feedback Recorded'}
             </span>
           </button>
         </div>
 
-
-
-        {/* Dynamic Discount Unlock Banner */}
-        {unlocked && discount > 0 ? (
+        {/* Dynamic Discount / Status Banner */}
+        {!isDiscountEnabled ? (
+          <div className="p-3.5 bg-stone-100 text-stone-600 text-xs rounded-2xl mb-6 flex items-center gap-2.5 border border-stone-200">
+            <HelpCircle size={16} className="text-stone-400 shrink-0" />
+            <span>Store self-checkout discount is currently turned off by admin. Standard pricing applies.</span>
+          </div>
+        ) : unlocked && discount > 0 ? (
           <div className="p-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl shadow-md mb-6 flex items-center justify-between animate-fadeIn">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded-xl">
@@ -157,7 +165,11 @@ export function Step4Feedback({
           <div className="flex justify-between items-center text-stone-600">
             <span className="flex items-center gap-1.5">
               <span>Feedback Discount:</span>
-              {unlocked ? (
+              {!isDiscountEnabled ? (
+                <span className="text-[11px] bg-stone-200 text-stone-600 px-1.5 py-0.2 rounded font-medium">
+                  DISABLED
+                </span>
+              ) : unlocked ? (
                 <span className="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">
                   APPLIED
                 </span>
@@ -167,8 +179,8 @@ export function Step4Feedback({
                 </span>
               )}
             </span>
-            <span className={unlocked && discount > 0 ? 'text-emerald-600 font-bold text-base' : 'text-stone-400'}>
-              {unlocked && discount > 0 ? `- ${formatCurrency(discount)}` : '₹0'}
+            <span className={isDiscountEnabled && unlocked && discount > 0 ? 'text-emerald-600 font-bold text-base' : 'text-stone-400'}>
+              {isDiscountEnabled && unlocked && discount > 0 ? `- ${formatCurrency(discount)}` : '₹0'}
             </span>
           </div>
 

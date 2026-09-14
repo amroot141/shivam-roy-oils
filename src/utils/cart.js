@@ -19,16 +19,19 @@ export function cartSubtotal(items = []) {
 }
 
 /**
- * Calculates total discount based on customer feedback state.
+ * Calculates total discount based on customer feedback state and admin toggle.
  * CRUCIAL LOGIC:
+ * - isEnabled === false (Admin toggle OFF): Returns 0.
  * - Feedback 'good' or 'bad' (from self-checkout): Unlocks product-level discount_percent.
  * - Feedback 'none' (or staff counter checkout): Zero discount applied.
  * 
  * @param {Array<{ unit_price: number, quantity: number, discount_percent?: number }>} items
  * @param {'good' | 'bad' | 'none'} [feedback='none']
+ * @param {boolean} [isEnabled=true]
  * @returns {number} Total discount amount rounded to 2 decimal places
  */
-export function cartDiscount(items = [], feedback = 'none') {
+export function cartDiscount(items = [], feedback = 'none', isEnabled = true) {
+  if (!isEnabled) return 0;
   if (!Array.isArray(items) || items.length === 0) return 0;
   // Only apply discount if feedback is 'good' or 'bad'
   if (feedback !== 'good' && feedback !== 'bad') {
@@ -45,6 +48,32 @@ export function cartDiscount(items = [], feedback = 'none') {
   }, 0);
 
   return Math.round(discount * 100) / 100;
+}
+
+/**
+ * Calculates manual discount for staff checkout.
+ * Supports percentage ('percent') or fixed amount ('fixed').
+ * 
+ * @param {number} subtotal
+ * @param {'percent' | 'fixed'} type
+ * @param {number|string} value
+ * @returns {number} Discount amount rounded to 2 decimal places
+ */
+export function calculateManualDiscount(subtotal = 0, type = 'percent', value = 0) {
+  const safeSubtotal = Math.max(0, Number(subtotal) || 0);
+  const numVal = Math.max(0, Number(value) || 0);
+
+  if (safeSubtotal <= 0 || numVal <= 0) return 0;
+
+  if (type === 'percent') {
+    const clampedPct = Math.min(100, numVal);
+    const amount = (safeSubtotal * clampedPct) / 100;
+    return Math.round(amount * 100) / 100;
+  }
+
+  // Fixed rupee amount (clamped so discount cannot exceed subtotal)
+  const amount = Math.min(safeSubtotal, numVal);
+  return Math.round(amount * 100) / 100;
 }
 
 /**

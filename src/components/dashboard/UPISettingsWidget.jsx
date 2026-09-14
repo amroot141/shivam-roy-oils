@@ -1,13 +1,27 @@
-import React, { useState } from 'react';
-import { Settings, QrCode, Save, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings, QrCode, Save, CheckCircle2, Image as ImageIcon, Tag } from 'lucide-react';
 import { DEFAULT_UPI_QR } from '../../services/db';
 
 export function UPISettingsWidget({ settings, onUpdateSettings }) {
   const [upiVpa, setUpiVpa] = useState(settings?.upi_vpa || 'shivamroyoils@upi');
   const [upiQrUrl, setUpiQrUrl] = useState(settings?.upi_qr_image_url || '');
   const [storeName, setStoreName] = useState(settings?.store_name || '');
+  const [selfCheckoutDiscountEnabled, setSelfCheckoutDiscountEnabled] = useState(
+    settings?.self_checkout_discount_enabled !== false
+  );
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      if (settings.upi_vpa !== undefined) setUpiVpa(settings.upi_vpa);
+      if (settings.upi_qr_image_url !== undefined) setUpiQrUrl(settings.upi_qr_image_url);
+      if (settings.store_name !== undefined) setStoreName(settings.store_name);
+      if (settings.self_checkout_discount_enabled !== undefined) {
+        setSelfCheckoutDiscountEnabled(settings.self_checkout_discount_enabled !== false);
+      }
+    }
+  }, [settings]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -16,7 +30,8 @@ export function UPISettingsWidget({ settings, onUpdateSettings }) {
       await onUpdateSettings({
         upi_vpa: upiVpa.trim(),
         upi_qr_image_url: upiQrUrl.trim() || DEFAULT_UPI_QR,
-        store_name: storeName.trim()
+        store_name: storeName.trim(),
+        self_checkout_discount_enabled: selfCheckoutDiscountEnabled
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -108,6 +123,44 @@ export function UPISettingsWidget({ settings, onUpdateSettings }) {
               <span className="font-bold text-stone-800 block text-[11px]">QR Preview</span>
               <span className="text-[10px] text-stone-400">Displayed to customers during UPI checkout</span>
             </div>
+          </div>
+
+          {/* Self-Checkout Discount Global Toggle */}
+          <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-200/80 flex items-center justify-between gap-3">
+            <div className="pr-1 flex-1">
+              <div className="flex items-center gap-1.5">
+                <Tag size={13} className="text-amber-600 shrink-0" />
+                <span className="font-bold text-stone-900 text-xs">Self-Checkout Discount</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                  selfCheckoutDiscountEnabled
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-stone-200 text-stone-600'
+                }`}>
+                  {selfCheckoutDiscountEnabled ? 'Active' : 'Disabled'}
+                </span>
+              </div>
+              <p className="text-[10.5px] text-stone-500 mt-0.5 leading-snug">
+                {selfCheckoutDiscountEnabled
+                  ? 'Kiosk automatically calculates & unlocks feedback discounts for customers.'
+                  : 'Disabled: Customer self-checkout charges standard retail price without discounts.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={selfCheckoutDiscountEnabled}
+              onClick={() => setSelfCheckoutDiscountEnabled(!selfCheckoutDiscountEnabled)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                selfCheckoutDiscountEnabled ? 'bg-emerald-600' : 'bg-stone-300'
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                  selfCheckoutDiscountEnabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
 
           <button

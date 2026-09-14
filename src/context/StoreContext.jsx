@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { LocalStorageDB, STORAGE_KEYS, SEED_SETTINGS } from '../services/db';
 import { inventoryService } from '../services/inventoryService';
 import { billService } from '../services/billService';
 import { settingsService } from '../services/settingsService';
@@ -6,15 +7,24 @@ import { settingsService } from '../services/settingsService';
 const StoreContext = createContext(null);
 
 export function StoreProvider({ children }) {
-  const [inventory, setInventory] = useState([]);
-  const [bills, setBills] = useState([]);
-  const [settings, setSettings] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Initialize LocalStorage database
+  LocalStorageDB.init();
+
+  // Instant 0ms hydration from local persistent cache
+  const [inventory, setInventory] = useState(() => LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []));
+  const [bills, setBills] = useState(() => LocalStorageDB.get(STORAGE_KEYS.BILLS, []));
+  const [settings, setSettings] = useState(() => LocalStorageDB.get(STORAGE_KEYS.SETTINGS, SEED_SETTINGS));
+  
+  // NEVER block the screen with full-page loader if we already have local cache
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const loadData = useCallback(async () => {
+  // Fast background sync without blocking the user interface
+  const loadData = useCallback(async (showLoadingSpinner = false) => {
     try {
-      setLoading(true);
+      if (showLoadingSpinner) {
+        setLoading(true);
+      }
       const [invData, billsData, settData] = await Promise.all([
         inventoryService.getInventory(),
         billService.getBills(),
@@ -25,46 +35,51 @@ export function StoreProvider({ children }) {
       setSettings(settData);
       setError(null);
     } catch (err) {
-      console.error('Failed to load store data:', err);
+      console.warn('Background sync note:', err.message);
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (showLoadingSpinner) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    loadData();
+    // Non-blocking background sync on initial mount
+    loadData(false);
   }, [loadData]);
 
-  // Actions
+  // Actions with Instant Optimistic UI Updates (0ms response time)
   const handleCreateBill = async (billData) => {
     const created = await billService.createBill(billData);
-    // Reload state so inventory counts and bills sync across all views
-    await loadData();
+    // Instant optimistic update in React state
+    setBills(prev => [created, ...prev.filter(b => b.id !== created.id)]);
+    const currentInv = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
+    setInventory(currentInv);
     return created;
   };
 
   const handleAddProduct = async (productData) => {
     const created = await inventoryService.addProduct(productData);
-    await loadData();
+    setInventory(prev => [created, ...prev.filter(p => p.id !== created.id)]);
     return created;
   };
 
   const handleUpdateProduct = async (id, updates) => {
     const updated = await inventoryService.updateProduct(id, updates);
-    await loadData();
+    setInventory(prev => prev.map(p => p.id === id ? updated : p));
     return updated;
   };
 
   const handleDeleteProduct = async (id) => {
     const res = await inventoryService.deleteProduct(id);
-    await loadData();
+    setInventory(prev => prev.filter(p => p.id !== id));
     return res;
   };
 
   const handleAdjustStock = async (id, delta) => {
     const updated = await inventoryService.adjustStock(id, delta);
-    await loadData();
+    setInventory(prev => prev.map(p => p.id === id ? updated : p));
     return updated;
   };
 
@@ -76,7 +91,9 @@ export function StoreProvider({ children }) {
 
   const handleResetStore = async () => {
     await settingsService.resetToDefaults();
-    await loadData();
+    setInventory(LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []));
+    setBills(LocalStorageDB.get(STORAGE_KEYS.BILLS, []));
+    setSettings(LocalStorageDB.get(STORAGE_KEYS.SETTINGS, SEED_SETTINGS));
   };
 
   return (
@@ -87,7 +104,7 @@ export function StoreProvider({ children }) {
         settings,
         loading,
         error,
-        refresh: loadData,
+        refresh: () => loadData(false),
         createBill: handleCreateBill,
         addProduct: handleAddProduct,
         updateProduct: handleUpdateProduct,

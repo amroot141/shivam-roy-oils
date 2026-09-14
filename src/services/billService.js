@@ -1,31 +1,30 @@
 import { LocalStorageDB, STORAGE_KEYS } from './db';
 import { inventoryService } from './inventoryService';
-import { db, collection, doc, getDocs, setDoc, query, orderBy } from './firebase';
+import { db, collection, doc, getDocs, setDoc, query, orderBy, withTimeout } from './firebase';
 
 /**
  * Bill / Transaction Service
- * Manages checkout persistence and stock synchronization with Firebase Firestore.
+ * Instant local cache reads with fast non-blocking Firestore sync.
  */
 export const billService = {
   /**
-   * Fetches all bills ordered newest first
+   * Fetches all bills ordered newest first (instant local first, fast sync)
    * @returns {Promise<Array<Object>>}
    */
   async getBills() {
     LocalStorageDB.init();
-    try {
-      const snap = await getDocs(query(collection(db, 'bills')));
-      if (!snap.empty) {
-        const remoteBills = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        remoteBills.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        LocalStorageDB.set(STORAGE_KEYS.BILLS, remoteBills);
-        return remoteBills;
-      }
-    } catch (err) {
-      console.warn('Firestore bills read failed, falling back to local:', err.message);
+    const local = LocalStorageDB.get(STORAGE_KEYS.BILLS, []);
+
+    // Try fast Firestore fetch (max 600ms timeout)
+    const snap = await withTimeout(getDocs(query(collection(db, 'bills'))), 600, null);
+    if (snap && !snap.empty) {
+      const remoteBills = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      remoteBills.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      LocalStorageDB.set(STORAGE_KEYS.BILLS, remoteBills);
+      return remoteBills;
     }
-    const bills = LocalStorageDB.get(STORAGE_KEYS.BILLS, []);
-    return bills.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    return local.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   },
 
   /**
@@ -73,16 +72,14 @@ export const billService = {
       await inventoryService.decrementStockForBill(newBill.items);
     }
 
-    // 2. Persist to Firestore
-    try {
-      await setDoc(doc(db, 'bills', newBill.id), newBill);
-    } catch (err) {
-      console.warn('Firestore bill save failed, saving locally:', err.message);
-    }
-
-    // 3. Persist to Local Cache
+    // 2. Persist to Local Cache immediately (0ms)
     bills.unshift(newBill);
     LocalStorageDB.set(STORAGE_KEYS.BILLS, bills);
+
+    // 3. Non-blocking Firestore write in background
+    setDoc(doc(db, 'bills', newBill.id), newBill).catch(err => 
+      console.warn('Firestore bill save queued locally:', err.message)
+    );
 
     return newBill;
   },

@@ -23,7 +23,8 @@ const SEED_SETTINGS = {
   address: 'Shop 14, Kisan Mandi Complex, Ring Road',
   phone: '+91 98765 01234',
   low_stock_threshold: 10,
-  tax_rate: 0
+  tax_rate: 0,
+  self_checkout_discount_enabled: true
 };
 
 const SEED_INVENTORY = [];
@@ -75,9 +76,16 @@ export class LocalStorageDB {
    * Initializes local database with seed data if not present
    */
   static init() {
-    if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
+    const existingSettings = LocalStorageDB.get(STORAGE_KEYS.SETTINGS, null);
+    if (!existingSettings) {
       LocalStorageDB.set(STORAGE_KEYS.SETTINGS, SEED_SETTINGS);
+    } else if (existingSettings.self_checkout_discount_enabled === undefined) {
+      LocalStorageDB.set(STORAGE_KEYS.SETTINGS, {
+        ...existingSettings,
+        self_checkout_discount_enabled: true
+      });
     }
+
     if (!localStorage.getItem(STORAGE_KEYS.INVENTORY)) {
       LocalStorageDB.set(STORAGE_KEYS.INVENTORY, SEED_INVENTORY);
     }

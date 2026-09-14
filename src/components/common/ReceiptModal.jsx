@@ -113,13 +113,13 @@ export function ReceiptModal({ isOpen, onClose, bill, storeSettings }) {
             {Number(bill.discount_amount) > 0 ? (
               <div className="flex justify-between text-emerald-600 font-medium">
                 <span className="flex items-center gap-1">
-                  <Sparkles size={12} /> Feedback Discount:
+                  <Sparkles size={12} /> {bill.feedback_source === 'staff' ? 'Counter Discount:' : 'Feedback Discount:'}
                 </span>
                 <span>- {formatCurrency(bill.discount_amount)}</span>
               </div>
             ) : (
               <div className="flex justify-between text-stone-400 text-[11px]">
-                <span>Feedback Discount:</span>
+                <span>Discount:</span>
                 <span>₹0 (None)</span>
               </div>
             )}

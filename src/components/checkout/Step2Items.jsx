@@ -14,7 +14,7 @@ import { UnitBadge, StockBadge } from '../common/Badge';
 import { formatCurrency } from '../../utils/formatters';
 import { cartSubtotal, cartNumItems } from '../../utils/cart';
 
-export function Step2Items({ inventory = [], cart = {}, setCart, onNext, onPrev }) {
+export function Step2Items({ inventory = [], cart = {}, setCart, isDiscountEnabled = true, onNext, onPrev }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUnit, setSelectedUnit] = useState('all');
 
@@ -62,10 +62,12 @@ export function Step2Items({ inventory = [], cart = {}, setCart, onNext, onPrev 
   const subtotal = cartSubtotal(cartItemsList);
   const totalCount = cartNumItems(cartItemsList);
   
-  // Potential feedback savings
-  const potentialSavings = cartItemsList.reduce((acc, item) => {
-    return acc + ((item.unit_price * (item.discount_percent || 0) / 100) * item.quantity);
-  }, 0);
+  // Potential feedback savings (only if enabled by admin)
+  const potentialSavings = isDiscountEnabled
+    ? cartItemsList.reduce((acc, item) => {
+        return acc + ((item.unit_price * (item.discount_percent || 0) / 100) * item.quantity);
+      }, 0)
+    : 0;
 
   const unitsList = ['all', 'bottle', 'kg', 'liter', 'piece'];
 
@@ -142,7 +144,7 @@ export function Step2Items({ inventory = [], cart = {}, setCart, onNext, onPrev 
                   </h3>
 
                   {/* Feedback Discount Promo Tag */}
-                  {hasDiscount && (
+                  {hasDiscount && isDiscountEnabled && (
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-50 to-yellow-100 border border-amber-200/80 text-amber-900 text-xs font-semibold mt-2">
                       <Sparkles size={12} className="text-amber-600 animate-pulse" />
                       <span>Feedback discount: up to <strong className="text-amber-700">{product.discount_percent}% OFF</strong></span>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { LocalStorageDB, STORAGE_KEYS, SEED_USERS } from '../services/db';
-import { db, collection, doc, getDocs, setDoc } from '../services/firebase';
+import { db, collection, doc, getDocs, setDoc, withTimeout } from '../services/firebase';
 
 const AuthContext = createContext(null);
 const AUTH_STORAGE_KEY = 'shivamroyoils_auth_session_v1';
@@ -17,18 +17,18 @@ export function AuthProvider({ children }) {
 
   const [loading, setLoading] = useState(false);
 
-  // Sync users from Firestore on boot
+  // Fast non-blocking sync of users from Firestore on boot
   useEffect(() => {
     async function syncUsers() {
       try {
-        const snap = await getDocs(collection(db, 'users'));
-        if (!snap.empty) {
+        const snap = await withTimeout(getDocs(collection(db, 'users')), 600, null);
+        if (snap && !snap.empty) {
           const remoteUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           LocalStorageDB.set(STORAGE_KEYS.USERS, remoteUsers);
-        } else {
-          // Seed the initial admin user to Firestore
+        } else if (snap && snap.empty) {
+          // Non-blocking seed of initial admin user to Firestore in background
           for (const u of SEED_USERS) {
-            await setDoc(doc(db, 'users', u.id), u);
+            setDoc(doc(db, 'users', u.id), u).catch(() => {});
           }
         }
       } catch (err) {

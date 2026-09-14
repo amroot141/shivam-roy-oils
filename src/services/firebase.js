@@ -27,6 +27,25 @@ export const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
+/**
+ * Fast promise wrapper that resolves with fallback if network takes longer than maxMs.
+ * Ensures zero lag / 0ms blocking on mobile connections.
+ */
+export async function withTimeout(promise, maxMs = 600, fallback = null) {
+  let timer;
+  const timeoutPromise = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(fallback), maxMs);
+  });
+  try {
+    const res = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timer);
+    return res;
+  } catch {
+    clearTimeout(timer);
+    return fallback;
+  }
+}
+
 export { 
   collection, 
   doc, 

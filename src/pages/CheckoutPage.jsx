@@ -10,6 +10,7 @@ import { cartSubtotal, cartDiscount, cartTotal, buildBillItems } from '../utils/
 
 export function CheckoutPage() {
   const { inventory, settings, createBill, loading } = useStore();
+  const isDiscountEnabled = settings?.self_checkout_discount_enabled !== false;
 
   const [currentStep, setCurrentStep] = useState(1);
   const [maxStepReached, setMaxStepReached] = useState(1);
@@ -73,7 +74,7 @@ export function CheckoutPage() {
   const handleSubmitBill = async () => {
     setSubmitting(true);
     try {
-      const billDiscount = cartDiscount(cartItemsList, feedback);
+      const billDiscount = cartDiscount(cartItemsList, feedback, isDiscountEnabled);
       const finalTotal = cartTotal(subtotal, billDiscount);
 
       const billData = {
@@ -163,6 +164,7 @@ export function CheckoutPage() {
             inventory={inventory}
             cart={cart}
             setCart={setCart}
+            isDiscountEnabled={isDiscountEnabled}
             onNext={handleNext}
             onPrev={handlePrev}
           />
@@ -185,6 +187,7 @@ export function CheckoutPage() {
             setFeedback={setFeedback}
             cartItemsList={cartItemsList}
             paymentInfo={paymentInfo}
+            isDiscountEnabled={isDiscountEnabled}
             onSubmitBill={handleSubmitBill}
             onPrev={handlePrev}
             submitting={submitting}

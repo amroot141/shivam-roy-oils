@@ -11,10 +11,11 @@ import {
   QrCode, 
   AlertCircle,
   Receipt,
-  ShieldAlert
+  Tag,
+  X
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
-import { cartSubtotal, cartNumItems } from '../../utils/cart';
+import { cartSubtotal, cartNumItems, calculateManualDiscount, cartTotal } from '../../utils/cart';
 
 export function StaffCartSummary({ 
   inventory = [], 
@@ -29,6 +30,8 @@ export function StaffCartSummary({
   const [customerAddress, setCustomerAddress] = useState('Store Counter');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [cashGiven, setCashGiven] = useState('');
+  const [discountType, setDiscountType] = useState('percent'); // 'percent' | 'fixed'
+  const [discountValue, setDiscountValue] = useState('');
 
   // Items list
   const cartItems = Object.entries(cart).map(([id, qty]) => {
@@ -46,9 +49,9 @@ export function StaffCartSummary({
   const subtotal = cartSubtotal(cartItems);
   const numItems = cartNumItems(cartItems);
 
-  // STAFF COUNTER RULE: feedback: 'none', discount_amount: 0
-  const discount = 0;
-  const total = subtotal;
+  // Staff counter manual discount calculation
+  const discount = calculateManualDiscount(subtotal, discountType, discountValue);
+  const total = cartTotal(subtotal, discount);
 
   const cashNum = parseFloat(cashGiven) || 0;
   const changeReturned = paymentMethod === 'cash' && cashNum >= total
@@ -57,6 +60,11 @@ export function StaffCartSummary({
 
   const handleQuickCash = (amt) => {
     setCashGiven(String(amt));
+  };
+
+  const handleClearAll = () => {
+    setDiscountValue('');
+    onClearCart();
   };
 
   const handleSubmit = (e) => {
@@ -80,10 +88,9 @@ export function StaffCartSummary({
       payment_method: paymentMethod,
       cash_given: paymentMethod === 'cash' ? cashNum : null,
       change_returned: paymentMethod === 'cash' ? changeReturned : null,
-      // Staff Counter Rule Enforced:
       feedback: 'none',
       feedback_source: 'staff',
-      discount_amount: 0,
+      discount_amount: discount,
       subtotal,
       total_amount: total,
       num_items: numItems
@@ -104,7 +111,7 @@ export function StaffCartSummary({
         {cartItems.length > 0 && (
           <button
             type="button"
-            onClick={onClearCart}
+            onClick={handleClearAll}
             className="text-xs text-rose-600 hover:text-rose-800 font-semibold flex items-center gap-1 cursor-pointer"
           >
             <Trash2 size={13} />
@@ -114,7 +121,7 @@ export function StaffCartSummary({
       </div>
 
       {/* Cart Items Scroll Area */}
-      <div className="flex-1 overflow-y-auto py-2 divide-y divide-stone-100 min-h-[140px] max-h-[220px]">
+      <div className="flex-1 overflow-y-auto py-2 divide-y divide-stone-100 min-h-[140px] max-h-[200px]">
         {cartItems.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-6 text-stone-400">
             <span className="text-xs">No items added to counter cart.</span>
@@ -166,10 +173,94 @@ export function StaffCartSummary({
         )}
       </div>
 
-      {/* Staff Rule Notice */}
-      <div className="px-3 py-1.5 bg-stone-100 rounded-xl text-[11px] text-stone-600 flex items-center gap-1.5 my-2">
-        <ShieldAlert size={13} className="text-amber-600 shrink-0" />
-        <span>Staff billing: Standard retail price. Feedback discounts disabled.</span>
+      {/* Staff Manual Discount Controls */}
+      <div className="p-2.5 bg-amber-50/40 rounded-2xl border border-amber-200/80 my-1 space-y-1.5 text-xs">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-stone-800 font-bold text-[11px]">
+            <Tag size={12} className="text-amber-600" />
+            <span>Staff Manual Discount</span>
+          </div>
+          <div className="flex items-center bg-stone-200/70 p-0.5 rounded-lg text-[10px] font-bold">
+            <button
+              type="button"
+              onClick={() => setDiscountType('percent')}
+              className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                discountType === 'percent'
+                  ? 'bg-white text-stone-900 shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              % Percent
+            </button>
+            <button
+              type="button"
+              onClick={() => setDiscountType('fixed')}
+              className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                discountType === 'fixed'
+                  ? 'bg-white text-stone-900 shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              ₹ Fixed
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 font-bold text-xs">
+              {discountType === 'percent' ? '%' : '₹'}
+            </span>
+            <input
+              type="number"
+              min="0"
+              max={discountType === 'percent' ? 100 : subtotal}
+              step="any"
+              value={discountValue}
+              onChange={(e) => setDiscountValue(e.target.value)}
+              placeholder={discountType === 'percent' ? 'Discount % (e.g. 10)' : 'Discount in ₹ (e.g. 50)'}
+              className="w-full pl-6 pr-2 py-1.5 bg-white border border-stone-200 rounded-xl text-xs font-bold focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+          {discountValue !== '' && Number(discountValue) > 0 && (
+            <button
+              type="button"
+              onClick={() => setDiscountValue('')}
+              className="p-1.5 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              title="Clear Discount"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* Quick Discount Presets */}
+        <div className="flex items-center gap-1 overflow-x-auto pt-0.5">
+          <span className="text-[10px] text-stone-400 shrink-0 font-medium">Quick:</span>
+          {(discountType === 'percent' ? [5, 10, 15, 20] : [20, 50, 100, 200]).map((val) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => setDiscountValue(String(val))}
+              className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer shrink-0 ${
+                String(discountValue) === String(val)
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-100'
+              }`}
+            >
+              {discountType === 'percent' ? `${val}%` : `₹${val}`}
+            </button>
+          ))}
+          {discountValue !== '' && (
+            <button
+              type="button"
+              onClick={() => setDiscountValue('')}
+              className="px-1.5 py-0.5 rounded-lg text-[10px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+            >
+              Reset
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Customer Info Inputs */}
@@ -270,11 +361,30 @@ export function StaffCartSummary({
 
       {/* Bill Totals & Submit Print Action */}
       <div className="pt-3 mt-2 border-t border-stone-200">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs text-stone-500 font-medium">Total Amount Due:</span>
-          <span className="text-xl font-extrabold text-stone-950 font-heading">
-            {formatCurrency(total)}
-          </span>
+        <div className="space-y-1 mb-3">
+          <div className="flex items-center justify-between text-xs text-stone-500">
+            <span>Subtotal ({numItems} items):</span>
+            <span className="font-semibold text-stone-800">{formatCurrency(subtotal)}</span>
+          </div>
+
+          {discount > 0 && (
+            <div className="flex items-center justify-between text-xs text-emerald-600 font-semibold">
+              <span className="flex items-center gap-1">
+                <span>Manual Discount:</span>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">
+                  {discountType === 'percent' ? `${discountValue}%` : 'FIXED'}
+                </span>
+              </span>
+              <span>- {formatCurrency(discount)}</span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-1 border-t border-stone-100">
+            <span className="text-xs text-stone-700 font-bold">Total Amount Due:</span>
+            <span className="text-xl font-extrabold text-stone-950 font-heading">
+              {formatCurrency(total)}
+            </span>
+          </div>
         </div>
 
         <button
