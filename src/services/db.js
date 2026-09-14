@@ -25,6 +25,7 @@ const SEED_SETTINGS = {
   low_stock_threshold: 10,
   tax_rate: 0,
   self_checkout_discount_enabled: true,
+  custom_upi_deep_link: '',
   // Receipt / Printing Template Customization
   receipt_store_name: 'Shivam Roy Oils',
   receipt_tagline: 'Farm-Fresh Cold Pressed Oils & Spices',

@@ -12,15 +12,19 @@ import {
   AlertCircle,
   Receipt,
   Tag,
-  X
+  X,
+  Scale
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { cartSubtotal, cartNumItems, calculateManualDiscount, cartTotal } from '../../utils/cart';
+import { CustomItemModal } from '../common/CustomItemModal';
 
 export function StaffCartSummary({ 
   inventory = [], 
   cart = {}, 
   onUpdateQty, 
+  onSetExactQty,
+  onAddCustomItem,
   onClearCart, 
   onCompleteBill,
   submitting = false 
@@ -32,6 +36,7 @@ export function StaffCartSummary({
   const [cashGiven, setCashGiven] = useState('');
   const [discountType, setDiscountType] = useState('percent'); // 'percent' | 'fixed'
   const [discountValue, setDiscountValue] = useState('');
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
 
   // Items list
   const cartItems = Object.entries(cart).map(([id, qty]) => {
@@ -42,7 +47,7 @@ export function StaffCartSummary({
       unit: prod?.unit || 'unit',
       unit_price: prod?.unit_price || 0,
       quantity: qty,
-      line_total: (prod?.unit_price || 0) * qty
+      line_total: Math.round((prod?.unit_price || 0) * qty * 100) / 100
     };
   });
 
@@ -108,16 +113,29 @@ export function StaffCartSummary({
             Counter Cart ({numItems} items)
           </h3>
         </div>
-        {cartItems.length > 0 && (
+
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handleClearAll}
-            className="text-xs text-rose-600 hover:text-rose-800 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+            onClick={() => setIsCustomModalOpen(true)}
+            className="text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold px-2.5 py-1 rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
+            title="Add loose oil or custom decimal quantity item (e.g. 5.62L)"
           >
-            <Trash2 size={13} />
-            <span>Clear</span>
+            <Scale size={13} className="text-amber-700" />
+            <span>+ Custom Item</span>
           </button>
-        )}
+
+          {cartItems.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="text-xs text-rose-600 hover:text-rose-800 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <Trash2 size={13} />
+              <span>Clear</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Scrollable Body: Items + Discounts + Customer + Payment */}
@@ -126,19 +144,26 @@ export function StaffCartSummary({
         <div className="divide-y divide-stone-100 min-h-[80px]">
           {cartItems.length === 0 ? (
             <div className="py-6 flex flex-col items-center justify-center text-center text-stone-400">
-              <span className="text-xs">No items added to counter cart.</span>
-              <span className="text-[11px] text-stone-300 mt-0.5">Click &quot;Add&quot; from the product catalog.</span>
+              <span className="text-xs mb-2">No items added to counter cart.</span>
+              <button
+                type="button"
+                onClick={() => setIsCustomModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-amber-700 cursor-pointer"
+              >
+                <Scale size={13} />
+                <span>+ Add Loose / Custom Item (e.g. 5.62L)</span>
+              </button>
             </div>
           ) : (
             cartItems.map((item) => {
               const original = inventory.find(p => p.id === item.id);
-              const maxStock = original?.stock_quantity || 999;
+              const maxStock = original?.stock_quantity || 9999;
               return (
                 <div key={item.id} className="py-2 flex items-center justify-between gap-2 text-xs">
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-stone-900 truncate">{item.product_name}</p>
                     <p className="text-stone-400 text-[11px]">
-                      ₹{item.unit_price} × {item.quantity} {item.unit}
+                      ₹{item.unit_price} / {item.unit}
                     </p>
                   </div>
 
@@ -146,20 +171,35 @@ export function StaffCartSummary({
                     <div className="flex items-center gap-1 bg-stone-100 p-0.5 rounded-lg border border-stone-200">
                       <button
                         type="button"
-                        onClick={() => onUpdateQty(original, -1)}
+                        onClick={() => onUpdateQty(original || item, -1)}
                         className="w-5 h-5 flex items-center justify-center text-stone-700 hover:bg-white rounded cursor-pointer"
                       >
                         <Minus size={11} />
                       </button>
-                      <span className="w-5 text-center font-bold text-stone-900">
-                        {item.quantity}
-                      </span>
+
+                      {/* Direct Decimal Input Field e.g. 5.62 */}
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '') return;
+                          if (typeof onSetExactQty === 'function') {
+                            onSetExactQty(original || item, val);
+                          }
+                        }}
+                        className="w-14 px-1 py-0.5 bg-white border border-stone-300 rounded text-center font-extrabold text-stone-950 text-xs focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                        title="Edit exact decimal quantity (e.g. 5.62)"
+                      />
+
                       <button
                         type="button"
-                        disabled={item.quantity >= maxStock}
-                        onClick={() => onUpdateQty(original, 1)}
+                        disabled={!original?.is_custom && item.quantity >= maxStock}
+                        onClick={() => onUpdateQty(original || item, 1)}
                         className={`w-5 h-5 flex items-center justify-center rounded cursor-pointer ${
-                          item.quantity >= maxStock ? 'text-stone-300' : 'text-stone-700 hover:bg-white'
+                          !original?.is_custom && item.quantity >= maxStock ? 'text-stone-300' : 'text-stone-700 hover:bg-white'
                         }`}
                       >
                         <Plus size={11} />
@@ -404,6 +444,16 @@ export function StaffCartSummary({
           <span>{submitting ? 'Generating Receipt...' : 'Complete & Print Bill'}</span>
         </button>
       </div>
+
+      <CustomItemModal
+        isOpen={isCustomModalOpen}
+        onClose={() => setIsCustomModalOpen(false)}
+        onAddCustomItem={(customProd, initialQty) => {
+          if (typeof onAddCustomItem === 'function') {
+            onAddCustomItem(customProd, initialQty);
+          }
+        }}
+      />
 
     </div>
   );

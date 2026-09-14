@@ -9,15 +9,18 @@ import { Store, ShieldCheck } from 'lucide-react';
 export function StaffPage() {
   const { inventory, settings, createBill, loading } = useStore();
   const [cart, setCart] = useState({});
+  const [customProducts, setCustomProducts] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [printedBill, setPrintedBill] = useState(null);
 
+  const allInventory = [...customProducts, ...inventory];
+
   const handleUpdateQty = (product, delta) => {
     const current = cart[product.id] || 0;
-    const updated = Math.max(0, current + delta);
-    const maxStock = Number(product.stock_quantity) || 0;
+    const updated = Math.max(0, Math.round((current + delta) * 100) / 100);
+    const maxStock = Number(product.stock_quantity) || 9999;
 
-    if (updated > maxStock) {
+    if (updated > maxStock && !product.is_custom) {
       alert(`Only ${maxStock} ${product.unit} available in stock!`);
       return;
     }
@@ -34,21 +37,49 @@ export function StaffPage() {
     }
   };
 
+  const handleSetExactQty = (product, exactQty) => {
+    const safeQty = Math.max(0, Math.round((Number(exactQty) || 0) * 100) / 100);
+    if (safeQty === 0) {
+      const nextCart = { ...cart };
+      delete nextCart[product.id];
+      setCart(nextCart);
+    } else {
+      setCart({
+        ...cart,
+        [product.id]: safeQty
+      });
+    }
+  };
+
+  const handleAddCustomItem = (customProd, initialQty) => {
+    setCustomProducts(prev => [customProd, ...prev]);
+    setCart(prev => ({
+      ...prev,
+      [customProd.id]: initialQty
+    }));
+  };
+
   const handleClearCart = () => {
     setCart({});
+    setCustomProducts([]);
   };
 
   const handleCompleteBill = async (billMeta) => {
     setSubmitting(true);
     try {
       const cartItemsList = Object.entries(cart).map(([id, qty]) => {
-        const prod = inventory.find(p => p.id === id);
+        const prod = allInventory.find(p => p.id === id);
         return {
           id,
           product_id: id,
-          quantity: qty,
+          product_name: prod?.product_name || 'Product',
+          unit: prod?.unit || 'bottle',
           unit_price: prod?.unit_price || 0,
-          discount_percent: prod?.discount_percent || 0
+          discount_percent: prod?.discount_percent || 0,
+          discount_flat: prod?.discount_flat || 0,
+          discount_type: prod?.discount_type || 'percent',
+          quantity: qty,
+          line_total: Math.round((prod?.unit_price || 0) * qty * 100) / 100
         };
       });
 
@@ -56,7 +87,7 @@ export function StaffPage() {
         customer_name: billMeta.customer_name,
         phone: billMeta.phone,
         address: billMeta.address,
-        items: buildBillItems(cartItemsList, inventory),
+        items: buildBillItems(cartItemsList, allInventory),
         num_items: billMeta.num_items,
         subtotal: billMeta.subtotal,
         discount_amount: billMeta.discount_amount || 0,
@@ -117,18 +148,22 @@ export function StaffPage() {
         {/* Product Catalog Grid (Left 7 Cols) */}
         <div className="lg:col-span-7 xl:col-span-8 h-[calc(100vh-11rem)] min-h-[480px]">
           <StaffProductGrid
-            inventory={inventory}
+            inventory={allInventory}
             cart={cart}
             onUpdateQty={handleUpdateQty}
+            onSetExactQty={handleSetExactQty}
+            onAddCustomItem={handleAddCustomItem}
           />
         </div>
 
         {/* Live Cart & Cashier Summary (Right 5 Cols) */}
         <div className="lg:col-span-5 xl:col-span-4 h-[calc(100vh-11rem)] min-h-[480px]">
           <StaffCartSummary
-            inventory={inventory}
+            inventory={allInventory}
             cart={cart}
             onUpdateQty={handleUpdateQty}
+            onSetExactQty={handleSetExactQty}
+            onAddCustomItem={handleAddCustomItem}
             onClearCart={handleClearCart}
             onCompleteBill={handleCompleteBill}
             submitting={submitting}

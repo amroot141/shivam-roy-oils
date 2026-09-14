@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Settings, QrCode, Save, CheckCircle2, Image as ImageIcon, Tag, Upload, Smartphone, Copy, ExternalLink, Check, Link } from 'lucide-react';
 import { DEFAULT_UPI_QR } from '../../services/db';
+import { buildUpiDeepLink } from '../../utils/cart';
 
 export function UPISettingsWidget({ settings, onUpdateSettings }) {
   const [upiVpa, setUpiVpa] = useState(settings?.upi_vpa || 'shivamroyoils@upi');
   const [upiQrUrl, setUpiQrUrl] = useState(settings?.upi_qr_image_url || '');
   const [storeName, setStoreName] = useState(settings?.store_name || '');
+  const [customUpiDeepLink, setCustomUpiDeepLink] = useState(settings?.custom_upi_deep_link || '');
   const [selfCheckoutDiscountEnabled, setSelfCheckoutDiscountEnabled] = useState(
     settings?.self_checkout_discount_enabled !== false
   );
@@ -15,10 +17,12 @@ export function UPISettingsWidget({ settings, onUpdateSettings }) {
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Build the UPI deep link from current form values
-  const upiDeepLink = upiVpa.trim()
-    ? `upi://pay?pa=${encodeURIComponent(upiVpa.trim())}&pn=${encodeURIComponent(storeName.trim() || 'Store')}&cu=INR&tn=${encodeURIComponent(`Payment to ${storeName.trim() || 'Store'}`)}`
-    : '';
+  // Build active UPI deep link with test amount ₹100
+  const upiDeepLink = buildUpiDeepLink({
+    upi_vpa: upiVpa,
+    store_name: storeName,
+    custom_upi_deep_link: customUpiDeepLink
+  }, 100);
 
   const handleCopyLink = () => {
     if (!upiDeepLink) return;
@@ -33,6 +37,7 @@ export function UPISettingsWidget({ settings, onUpdateSettings }) {
       if (settings.upi_vpa !== undefined) setUpiVpa(settings.upi_vpa);
       if (settings.upi_qr_image_url !== undefined) setUpiQrUrl(settings.upi_qr_image_url);
       if (settings.store_name !== undefined) setStoreName(settings.store_name);
+      if (settings.custom_upi_deep_link !== undefined) setCustomUpiDeepLink(settings.custom_upi_deep_link);
       if (settings.self_checkout_discount_enabled !== undefined) {
         setSelfCheckoutDiscountEnabled(settings.self_checkout_discount_enabled !== false);
       }
@@ -47,6 +52,7 @@ export function UPISettingsWidget({ settings, onUpdateSettings }) {
         upi_vpa: upiVpa.trim(),
         upi_qr_image_url: upiQrUrl.trim() || DEFAULT_UPI_QR,
         store_name: storeName.trim(),
+        custom_upi_deep_link: customUpiDeepLink.trim(),
         self_checkout_discount_enabled: selfCheckoutDiscountEnabled
       });
       setSaved(true);
@@ -137,6 +143,34 @@ export function UPISettingsWidget({ settings, onUpdateSettings }) {
               placeholder="e.g. storename@upi or 9876501234@paytm"
               className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono font-bold focus:outline-hidden focus:ring-1 focus:ring-amber-500"
             />
+          </div>
+
+          {/* Custom UPI Deep Link Template Input */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-bold uppercase text-stone-500 block">
+                Custom UPI Deep Link Template (Optional Override)
+              </label>
+              {customUpiDeepLink.trim() && (
+                <button
+                  type="button"
+                  onClick={() => setCustomUpiDeepLink('')}
+                  className="text-[10px] text-rose-600 font-bold hover:underline cursor-pointer"
+                >
+                  Reset to Auto
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              value={customUpiDeepLink}
+              onChange={(e) => setCustomUpiDeepLink(e.target.value)}
+              placeholder="e.g. upi://pay?pa={vpa}&pn={store_name}&am={amount}&mc=5411"
+              className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono text-stone-800 focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+            />
+            <p className="text-[10px] text-stone-400 mt-1 leading-snug">
+              Leave blank to auto-generate standard link, or customize using placeholders: <span className="font-mono text-stone-700 bg-stone-100 px-1 rounded">{'{amount}'}</span>, <span className="font-mono text-stone-700 bg-stone-100 px-1 rounded">{'{vpa}'}</span>, <span className="font-mono text-stone-700 bg-stone-100 px-1 rounded">{'{store_name}'}</span>.
+            </p>
           </div>
 
           {/* UPI Deep Link Preview & Test */}

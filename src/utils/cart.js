@@ -153,3 +153,37 @@ export function buildBillItems(cartItems = [], inventoryList = []) {
       };
     });
 }
+
+/**
+ * Builds standard or custom UPI deep link for merchant payment.
+ * Supports custom deep link templates with dynamic placeholders ({amount}, {vpa}, {store_name}).
+ * 
+ * @param {Object} settings - Store settings object
+ * @param {number} amount - Bill total amount
+ * @returns {string} Fully resolved UPI URL
+ */
+export function buildUpiDeepLink(settings = {}, amount = 0) {
+  const upiVpa = (settings?.upi_vpa || 'shivamroyoils@upi').trim();
+  const storeName = (settings?.store_name || 'Shivam Roy Oils').trim();
+  const formattedAmt = (Math.max(0, Number(amount) || 0)).toFixed(2);
+
+  const customTemplate = (settings?.custom_upi_deep_link || '').trim();
+
+  if (customTemplate) {
+    let customLink = customTemplate
+      .replace(/\{amount\}/g, formattedAmt)
+      .replace(/\{vpa\}/g, encodeURIComponent(upiVpa))
+      .replace(/\{store_name\}/g, encodeURIComponent(storeName));
+    
+    // If it's a standard upi:// scheme without am=, append &am=amount automatically
+    if (customLink.startsWith('upi://') && !customLink.includes('am=')) {
+      const sep = customLink.includes('?') ? '&' : '?';
+      customLink += `${sep}am=${formattedAmt}`;
+    }
+
+    return customLink;
+  }
+
+  // Default Standard UPI Deep Link
+  return `upi://pay?pa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(storeName)}&am=${formattedAmt}&cu=INR&tn=${encodeURIComponent(`Payment to ${storeName}`)}`;
+}

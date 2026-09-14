@@ -26,6 +26,8 @@ export function CheckoutPage() {
 
   // Cart: { [productId]: quantity }
   const [cart, setCart] = useState({});
+  // Custom loose products added during self-checkout
+  const [customProducts, setCustomProducts] = useState([]);
 
   // Payment State
   const [paymentInfo, setPaymentInfo] = useState({
@@ -37,11 +39,13 @@ export function CheckoutPage() {
   // Feedback State: 'good' | 'bad' | 'none'
   const [feedback, setFeedback] = useState('good'); // Default prompt to encourage positive feedback
 
+  const allInventory = [...inventory, ...customProducts];
+
   // Convert cart to items list
   const cartItemsList = Object.entries(cart)
     .filter(([_, qty]) => qty > 0)
     .map(([id, qty]) => {
-      const prod = inventory.find(p => p.id === id);
+      const prod = allInventory.find(p => p.id === id);
       return {
         id,
         product_id: id,
@@ -49,8 +53,10 @@ export function CheckoutPage() {
         unit: prod?.unit || 'bottle',
         unit_price: prod?.unit_price || 0,
         discount_percent: prod?.discount_percent || 0,
+        discount_flat: prod?.discount_flat || 0,
+        discount_type: prod?.discount_type || 'percent',
         quantity: qty,
-        line_total: (prod?.unit_price || 0) * qty
+        line_total: Math.round((prod?.unit_price || 0) * qty * 100) / 100
       };
     });
 
@@ -81,7 +87,7 @@ export function CheckoutPage() {
         customer_name: customerInfo.name,
         phone: customerInfo.phone,
         address: customerInfo.address,
-        items: buildBillItems(cartItemsList, inventory),
+        items: buildBillItems(cartItemsList, allInventory),
         num_items: cartItemsList.reduce((acc, i) => acc + i.quantity, 0),
         subtotal,
         discount_amount: billDiscount,
@@ -162,6 +168,8 @@ export function CheckoutPage() {
         {currentStep === 2 && (
           <Step2Items
             inventory={inventory}
+            customProducts={customProducts}
+            setCustomProducts={setCustomProducts}
             cart={cart}
             setCart={setCart}
             isDiscountEnabled={isDiscountEnabled}

@@ -12,6 +12,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
+import { buildUpiDeepLink } from '../../utils/cart';
 
 export function Step3Payment({ 
   paymentInfo, 
@@ -26,10 +27,9 @@ export function Step3Payment({
   // Initial estimate total (without discount until step 4 feedback)
   const currentTotal = subtotal;
 
-  // Construct UPI deep link URL
+  // Construct UPI deep link URL (supports custom template override if set in settings)
   const upiVpa = settings?.upi_vpa || 'shivamroyoils@upi';
-  const storeName = settings?.store_name || 'Shivam Roy Oils';
-  const upiDeepLink = `upi://pay?pa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(storeName)}&am=${currentTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Payment to ${storeName}`)}`;
+  const upiDeepLink = buildUpiDeepLink(settings, currentTotal);
 
   const handleCashGivenChange = (val) => {
     const num = parseFloat(val) || 0;

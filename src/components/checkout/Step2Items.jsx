@@ -8,15 +8,25 @@ import {
   ArrowRight, 
   ArrowLeft,
   PackageCheck,
-  AlertCircle
+  AlertCircle,
+  Edit3
 } from 'lucide-react';
 import { UnitBadge, StockBadge } from '../common/Badge';
+import { DecimalQtyModal } from '../common/DecimalQtyModal';
 import { formatCurrency } from '../../utils/formatters';
 import { cartSubtotal, cartNumItems } from '../../utils/cart';
 
-export function Step2Items({ inventory = [], cart = {}, setCart, isDiscountEnabled = true, onNext, onPrev }) {
+export function Step2Items({ 
+  inventory = [], 
+  cart = {}, 
+  setCart, 
+  isDiscountEnabled = true, 
+  onNext, 
+  onPrev 
+}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUnit, setSelectedUnit] = useState('all');
+  const [editingQtyProduct, setEditingQtyProduct] = useState(null);
 
   const filteredInventory = inventory.filter(item => {
     const matchesSearch = item.product_name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -28,8 +38,8 @@ export function Step2Items({ inventory = [], cart = {}, setCart, isDiscountEnabl
 
   const handleUpdateQty = (product, delta) => {
     const current = getItemQty(product.id);
-    const updated = Math.max(0, current + delta);
-    const maxStock = Number(product.stock_quantity) || 0;
+    const updated = Math.max(0, Math.round((current + delta) * 100) / 100);
+    const maxStock = Number(product.stock_quantity) || 9999;
 
     if (updated > maxStock) {
       alert(`Only ${maxStock} ${product.unit} available in stock!`);
@@ -44,6 +54,20 @@ export function Step2Items({ inventory = [], cart = {}, setCart, isDiscountEnabl
       setCart({
         ...cart,
         [product.id]: updated
+      });
+    }
+  };
+
+  const handleSetExactQty = (product, exactQty) => {
+    const safeQty = Math.max(0, Math.round((Number(exactQty) || 0) * 100) / 100);
+    if (safeQty === 0) {
+      const nextCart = { ...cart };
+      delete nextCart[product.id];
+      setCart(nextCart);
+    } else {
+      setCart({
+        ...cart,
+        [product.id]: safeQty
       });
     }
   };
@@ -74,7 +98,7 @@ export function Step2Items({ inventory = [], cart = {}, setCart, isDiscountEnabl
   return (
     <div className="max-w-4xl mx-auto py-6 pb-28">
       
-      {/* Search & Unit Filters */}
+      {/* Search & Unit Filters Header */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200 shadow-xs mb-6">
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
           <div className="relative w-full sm:w-80">
@@ -161,7 +185,7 @@ export function Step2Items({ inventory = [], cart = {}, setCart, isDiscountEnabl
                     </span>
                   </div>
 
-                  {/* Counter Steppers */}
+                  {/* Counter Steppers with Decimal Edit */}
                   {isOutOfStock ? (
                     <span className="text-xs font-semibold text-rose-500 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200">
                       Unavailable
@@ -176,28 +200,37 @@ export function Step2Items({ inventory = [], cart = {}, setCart, isDiscountEnabl
                       <span>Add</span>
                     </button>
                   ) : (
-                    <div className="flex items-center gap-2 bg-stone-100 p-1 rounded-2xl border border-stone-200">
+                    <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-2xl border border-stone-200">
                       <button
                         type="button"
                         onClick={() => handleUpdateQty(product, -1)}
-                        className="w-8 h-8 rounded-xl bg-white hover:bg-rose-50 hover:text-rose-600 text-stone-700 flex items-center justify-center font-bold shadow-xs transition-colors cursor-pointer"
+                        className="w-7 h-7 rounded-xl bg-white hover:bg-rose-50 hover:text-rose-600 text-stone-700 flex items-center justify-center font-bold shadow-xs transition-colors cursor-pointer"
                       >
-                        <Minus size={14} />
+                        <Minus size={13} />
                       </button>
-                      <span className="w-8 text-center font-bold text-stone-900 text-sm">
-                        {qty}
-                      </span>
+                      
+                      {/* Clickable quantity badge opens decimal popup */}
+                      <button
+                        type="button"
+                        onClick={() => setEditingQtyProduct(product)}
+                        className="px-2 py-0.5 rounded-lg bg-white hover:bg-amber-50 border border-amber-200 text-stone-900 font-extrabold text-xs flex items-center gap-1 shadow-xs cursor-pointer"
+                        title="Click to type exact decimal quantity e.g. 5.62"
+                      >
+                        <span>{qty}</span>
+                        <Edit3 size={11} className="text-amber-600" />
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => handleUpdateQty(product, 1)}
                         disabled={qty >= product.stock_quantity}
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold shadow-xs transition-colors ${
+                        className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold shadow-xs transition-colors ${
                           qty >= product.stock_quantity
                             ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
                             : 'bg-amber-600 hover:bg-amber-700 text-white cursor-pointer'
                         }`}
                       >
-                        <Plus size={14} />
+                        <Plus size={13} />
                       </button>
                     </div>
                   )}
@@ -256,6 +289,15 @@ export function Step2Items({ inventory = [], cart = {}, setCart, isDiscountEnabl
 
         </div>
       </div>
+
+      {/* Decimal Quantity Customization Modal */}
+      <DecimalQtyModal
+        isOpen={!!editingQtyProduct}
+        onClose={() => setEditingQtyProduct(null)}
+        product={editingQtyProduct}
+        currentQty={editingQtyProduct ? getItemQty(editingQtyProduct.id) : 1}
+        onSaveQty={handleSetExactQty}
+      />
 
     </div>
   );
