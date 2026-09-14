@@ -11,8 +11,20 @@ export function StoreProvider({ children }) {
   // Initialize LocalStorage database
   LocalStorageDB.init();
 
-  // Instant 0ms hydration from local persistent cache
-  const [inventory, setInventory] = useState(() => LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []));
+  // Instant 0ms hydration from local persistent cache with immediate deduplication
+  const [inventory, setInventory] = useState(() => {
+    const raw = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
+    const seen = new Map();
+    const clean = [];
+    for (const item of (Array.isArray(raw) ? raw : [])) {
+      const key = String(item.product_name || '').trim().toLowerCase();
+      if (key && !seen.has(key)) {
+        seen.set(key, true);
+        clean.push(item);
+      }
+    }
+    return clean;
+  });
   const [bills, setBills] = useState(() => LocalStorageDB.get(STORAGE_KEYS.BILLS, []));
   const [settings, setSettings] = useState(() => LocalStorageDB.get(STORAGE_KEYS.SETTINGS, SEED_SETTINGS));
   
@@ -53,24 +65,37 @@ export function StoreProvider({ children }) {
     // Non-blocking background sync on initial mount
     loadData(false);
 
-    // Realtime bidirectional sync for Inventory
+    // Realtime sync for Inventory with automatic deduplication & self-healing
     const unsubInv = onSnapshot(collection(db, 'inventory'), (snap) => {
       if (snap && !snap.empty) {
-        const remoteItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const localItems = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
-        const remoteMap = new Map(remoteItems.map(i => [i.id, i]));
-        
-        // Combine remote items with any unsynced local items
-        const merged = [...remoteItems];
-        for (const localItem of localItems) {
-          if (!remoteMap.has(localItem.id)) {
-            merged.push(localItem);
-            inventoryService.addProduct(localItem).catch(() => {});
+        const seen = new Map();
+        const uniqueItems = [];
+        const duplicateIds = [];
+
+        snap.docs.forEach(d => {
+          const item = { id: d.id, ...d.data() };
+          const key = String(item.product_name || '').trim().toLowerCase();
+          if (!key) {
+            duplicateIds.push(d.id);
+            return;
           }
+          if (seen.has(key)) {
+            duplicateIds.push(d.id);
+          } else {
+            seen.set(key, item);
+            uniqueItems.push(item);
+          }
+        });
+
+        // Automatically delete duplicate docs from Firestore in background
+        if (duplicateIds.length > 0) {
+          duplicateIds.forEach(dupId => {
+            deleteDoc(doc(db, 'inventory', dupId)).catch(() => {});
+          });
         }
 
-        setInventory(merged);
-        LocalStorageDB.set(STORAGE_KEYS.INVENTORY, merged);
+        setInventory(uniqueItems);
+        LocalStorageDB.set(STORAGE_KEYS.INVENTORY, uniqueItems);
       }
     }, (err) => {
       console.warn('Firestore realtime inventory sync error:', err.message);
@@ -164,6 +189,36 @@ export function StoreProvider({ children }) {
     return count;
   };
 
+  const handleCleanDuplicates = async () => {
+    const snap = await getDocs(collection(db, 'inventory'));
+    const seen = new Map();
+    const duplicateIds = [];
+    const unique = [];
+
+    snap.docs.forEach(d => {
+      const item = { id: d.id, ...d.data() };
+      const key = String(item.product_name || '').trim().toLowerCase();
+      if (!key) {
+        duplicateIds.push(d.id);
+        return;
+      }
+      if (seen.has(key)) {
+        duplicateIds.push(d.id);
+      } else {
+        seen.set(key, item);
+        unique.push(item);
+      }
+    });
+
+    if (duplicateIds.length > 0) {
+      await Promise.all(duplicateIds.map(id => deleteDoc(doc(db, 'inventory', id)).catch(() => {})));
+    }
+
+    setInventory(unique);
+    LocalStorageDB.set(STORAGE_KEYS.INVENTORY, unique);
+    return { total: snap.docs.length, deleted: duplicateIds.length, unique: unique.length };
+  };
+
   const handleResetStore = async () => {
     await settingsService.resetToDefaults();
     setInventory(LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []));
@@ -189,6 +244,7 @@ export function StoreProvider({ children }) {
         adjustStock: handleAdjustStock,
         updateSettings: handleUpdateSettings,
         syncInventoryToCloud: handleSyncInventoryToCloud,
+        cleanDuplicates: handleCleanDuplicates,
         resetStore: handleResetStore
       }}
     >

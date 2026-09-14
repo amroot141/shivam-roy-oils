@@ -15,47 +15,67 @@ export const inventoryService = {
     LocalStorageDB.init();
     let local = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
 
-    // Background Firestore sync promise with smart bidirectional local-remote merge
-    const firestorePromise = getDocs(collection(db, 'inventory')).then(snap => {
-      const remoteItems = (snap && !snap.empty)
-        ? snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        : [];
-
-      const remoteMap = new Map(remoteItems.map(item => [item.id, item]));
-      const mergedList = [...remoteItems];
-
-      // Merge any local-only items (e.g. products added on desktop) and auto-upload to Firestore
-      if (Array.isArray(local) && local.length > 0) {
-        for (const localItem of local) {
-          if (!remoteMap.has(localItem.id)) {
-            mergedList.push(localItem);
-            // Push local-only item to Firestore so all devices (phones, tablets, PCs) receive it!
-            setDoc(doc(db, 'inventory', localItem.id), localItem).catch(err => 
-              console.warn('Auto-upload local item queued:', err.message)
-            );
-          }
+    // Helper to deduplicate items by product name
+    const deduplicate = (items) => {
+      const seen = new Map();
+      const unique = [];
+      for (const item of (Array.isArray(items) ? items : [])) {
+        const key = String(item.product_name || '').trim().toLowerCase();
+        if (key && !seen.has(key)) {
+          seen.set(key, item);
+          unique.push(item);
         }
       }
+      return unique;
+    };
 
-      // If both remote and local are empty, fallback to SEED_INVENTORY
-      if (mergedList.length === 0) {
-        mergedList.push(...SEED_INVENTORY);
-        SEED_INVENTORY.forEach(item => {
-          setDoc(doc(db, 'inventory', item.id), item).catch(err => 
-            console.warn('Firestore seed push queued:', err.message)
-          );
+    const cleanLocal = deduplicate(local);
+    if (cleanLocal.length !== (local || []).length) {
+      LocalStorageDB.set(STORAGE_KEYS.INVENTORY, cleanLocal);
+    }
+
+    // Background Firestore sync with automatic duplicate doc cleanup
+    const firestorePromise = getDocs(collection(db, 'inventory')).then(snap => {
+      if (!snap || snap.empty) {
+        return cleanLocal.length > 0 ? cleanLocal : SEED_INVENTORY;
+      }
+
+      const seen = new Map();
+      const uniqueItems = [];
+      const duplicateDocIds = [];
+
+      snap.docs.forEach(d => {
+        const item = { id: d.id, ...d.data() };
+        const key = String(item.product_name || '').trim().toLowerCase();
+        if (!key) {
+          duplicateDocIds.push(d.id);
+          return;
+        }
+        if (seen.has(key)) {
+          duplicateDocIds.push(d.id);
+        } else {
+          seen.set(key, item);
+          uniqueItems.push(item);
+        }
+      });
+
+      // Cleanup duplicate docs from Firestore in background
+      if (duplicateDocIds.length > 0) {
+        duplicateDocIds.forEach(dupId => {
+          deleteDoc(doc(db, 'inventory', dupId)).catch(() => {});
         });
       }
 
-      LocalStorageDB.set(STORAGE_KEYS.INVENTORY, mergedList);
+      const finalList = uniqueItems.length > 0 ? uniqueItems : SEED_INVENTORY;
+      LocalStorageDB.set(STORAGE_KEYS.INVENTORY, finalList);
 
       if (typeof onBackgroundSync === 'function') {
-        onBackgroundSync(mergedList);
+        onBackgroundSync(finalList);
       }
-      return mergedList;
+      return finalList;
     }).catch(err => {
       console.warn('Firestore fetch note:', err.message);
-      return Array.isArray(local) && local.length > 0 ? local : SEED_INVENTORY;
+      return cleanLocal.length > 0 ? cleanLocal : SEED_INVENTORY;
     });
 
     // Try fast fetch within 1200ms
@@ -64,7 +84,7 @@ export const inventoryService = {
       return result;
     }
 
-    return Array.isArray(local) && local.length > 0 ? local : SEED_INVENTORY;
+    return cleanLocal.length > 0 ? cleanLocal : SEED_INVENTORY;
   },
 
   /**

@@ -254,6 +254,7 @@ export function DashboardPage() {
             onDeleteProduct={deleteProduct}
             onAdjustStock={adjustStock}
             onSyncToCloud={syncInventoryToCloud}
+            onCleanDuplicates={cleanDuplicates}
           />
         </div>
       )}

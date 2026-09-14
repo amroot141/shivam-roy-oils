@@ -23,7 +23,8 @@ export function InventoryTable({
   onUpdateProduct, 
   onDeleteProduct, 
   onAdjustStock,
-  onSyncToCloud
+  onSyncToCloud,
+  onCleanDuplicates
 }) {
   const [search, setSearch] = useState('');
   const [selectedUnit, setSelectedUnit] = useState('all');
@@ -31,6 +32,7 @@ export function InventoryTable({
   const [editingProduct, setEditingProduct] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -45,7 +47,19 @@ export function InventoryTable({
 
   const [formErrors, setFormErrors] = useState({});
 
-  const filtered = inventory.filter(item => {
+  // Deduplicate products so the view never renders duplicates
+  const uniqueInventory = React.useMemo(() => {
+    const map = new Map();
+    for (const item of (inventory || [])) {
+      const key = String(item.product_name || '').trim().toLowerCase();
+      if (key && !map.has(key)) {
+        map.set(key, item);
+      }
+    }
+    return Array.from(map.values());
+  }, [inventory]);
+
+  const filtered = uniqueInventory.filter(item => {
     const matchesSearch = item.product_name.toLowerCase().includes(search.toLowerCase());
     const matchesUnit = selectedUnit === 'all' || item.unit === selectedUnit;
     return matchesSearch && matchesUnit;
@@ -158,6 +172,19 @@ export function InventoryTable({
     }
   };
 
+  const handleCleanDuplicatesClick = async () => {
+    if (!onCleanDuplicates) return;
+    setIsCleaning(true);
+    try {
+      const res = await onCleanDuplicates();
+      alert(`Cleaned up duplicates! Deleted ${res.deleted} duplicate item(s). Active unique products: ${res.unique}.`);
+    } catch (err) {
+      alert('Failed to clean duplicates: ' + err.message);
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-xs">
       
@@ -167,7 +194,7 @@ export function InventoryTable({
           <h3 className="font-heading font-extrabold text-stone-900 text-lg sm:text-xl flex items-center gap-2">
             <span>Inventory Manager</span>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600">
-              {inventory.length} products
+              {uniqueInventory.length} products
             </span>
           </h3>
           <p className="text-xs text-stone-500">
@@ -176,6 +203,19 @@ export function InventoryTable({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {onCleanDuplicates && (
+            <button
+              type="button"
+              disabled={isCleaning}
+              onClick={handleCleanDuplicatesClick}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs rounded-2xl border border-rose-200 transition-colors cursor-pointer disabled:opacity-50"
+              title="Purge all duplicate items from Firestore and local cache"
+            >
+              <Trash2 size={14} className={isCleaning ? 'animate-spin text-rose-600' : 'text-rose-600'} />
+              <span>{isCleaning ? 'Cleaning...' : 'Clean Duplicates'}</span>
+            </button>
+          )}
+
           <button
             type="button"
             disabled={isSyncing}
