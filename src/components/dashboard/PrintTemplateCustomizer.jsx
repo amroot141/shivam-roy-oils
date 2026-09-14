@@ -12,6 +12,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { printThermalReceipt } from '../../utils/printer';
 
 export function PrintTemplateCustomizer({ settings, onUpdateSettings }) {
   const [formData, setFormData] = useState({
@@ -51,7 +52,24 @@ export function PrintTemplateCustomizer({ settings, onUpdateSettings }) {
   };
 
   const handleTestPrint = () => {
-    window.print();
+    const sampleBill = {
+      id: 'BILL-SAMPLE',
+      created_at: new Date().toISOString(),
+      customer_name: 'Rahul Sharma',
+      phone: '9876543210',
+      address: 'Plot 42, Civil Lines',
+      num_items: 3,
+      items: sampleItems,
+      subtotal: sampleSubtotal,
+      discount_amount: sampleDiscount,
+      total_amount: sampleTotal,
+      payment_method: 'cash',
+      cash_given: 1000,
+      change_returned: 266,
+      feedback: 'good',
+      feedback_source: 'staff'
+    };
+    printThermalReceipt({ bill: sampleBill, storeSettings: formData });
   };
 
   // Sample mock items for live preview

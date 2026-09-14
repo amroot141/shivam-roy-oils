@@ -13,6 +13,7 @@ import {
 import confetti from 'canvas-confetti';
 import { formatCurrency, formatDate, formatPhone } from '../../utils/formatters';
 import { downloadBillReceipt } from '../../utils/cart';
+import { printThermalReceipt } from '../../utils/printer';
 
 export function Step4Feedback({ 
   feedback = 'good', 
@@ -52,7 +53,7 @@ export function Step4Feedback({
   };
 
   const handlePrint = () => {
-    window.print();
+    printThermalReceipt({ bill, storeSettings });
   };
 
   const storeName = storeSettings?.store_name || 'Shivam Roy Oils';

@@ -2,12 +2,13 @@ import React from 'react';
 import { Modal } from './Modal';
 import { Printer, CheckCircle2, ThumbsUp, ThumbsDown, Sparkles } from 'lucide-react';
 import { formatCurrency, formatDate, formatPhone } from '../../utils/formatters';
+import { printThermalReceipt } from '../../utils/printer';
 
 export function ReceiptModal({ isOpen, onClose, bill, storeSettings }) {
   if (!bill) return null;
 
   const handlePrint = () => {
-    window.print();
+    printThermalReceipt({ bill, storeSettings });
   };
 
   const storeName = storeSettings?.receipt_store_name || storeSettings?.store_name || 'Shivam Roy Oils';

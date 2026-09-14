@@ -10,12 +10,13 @@ import {
   ShoppingBag
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatPhone } from '../../utils/formatters';
+import { printThermalReceipt } from '../../utils/printer';
 
 export function CheckoutReceipt({ bill, storeSettings, onReset }) {
   if (!bill) return null;
 
   const handlePrint = () => {
-    window.print();
+    printThermalReceipt({ bill, storeSettings });
   };
 
   const storeName = storeSettings?.store_name || 'Shivam Roy Oils';
