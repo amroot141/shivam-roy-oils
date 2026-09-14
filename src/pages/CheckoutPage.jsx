@@ -60,7 +60,7 @@ export function CheckoutPage() {
     });
 
   const subtotal = cartSubtotal(cartItemsList);
-  const discount = cartDiscount(cartItemsList, true, isDiscountEnabled);
+  const discount = cartDiscount(cartItemsList, 'good', isDiscountEnabled);
   const total = cartTotal(subtotal, discount);
 
   const goToStep = (step) => {
@@ -81,7 +81,7 @@ export function CheckoutPage() {
   const handleSubmitBill = async () => {
     setSubmitting(true);
     try {
-      const billDiscount = cartDiscount(cartItemsList, true, isDiscountEnabled);
+      const billDiscount = cartDiscount(cartItemsList, 'good', isDiscountEnabled);
       const finalTotal = cartTotal(subtotal, billDiscount);
 
       const billData = {

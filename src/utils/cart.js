@@ -35,14 +35,21 @@ export function cartSubtotal(items = []) {
  * @returns {number} Total discount amount rounded to 2 decimal places
  */
 export function cartDiscount(items = [], feedback = 'good', isEnabled = true) {
-  // Support both (items, isEnabled) and (items, feedback, isEnabled)
-  let enabled = isEnabled;
-  if (typeof feedback === 'boolean') {
+  let enabled = true;
+  let feedbackVal = 'good';
+
+  if (typeof isEnabled === 'boolean') {
+    enabled = isEnabled;
+    if (typeof feedback === 'string') {
+      feedbackVal = feedback;
+    }
+  } else if (typeof feedback === 'boolean') {
     enabled = feedback;
-  } else if (feedback === 'none') {
-    return 0;
+  } else if (typeof feedback === 'string') {
+    feedbackVal = feedback;
   }
-  if (!enabled) return 0;
+
+  if (!enabled || feedbackVal === 'none') return 0;
   if (!Array.isArray(items) || items.length === 0) return 0;
 
   const discount = items.reduce((acc, item) => {

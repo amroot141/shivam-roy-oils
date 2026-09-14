@@ -87,7 +87,7 @@ export function Step2Items({
 
   const subtotal = cartSubtotal(cartItemsList);
   const totalCount = cartNumItems(cartItemsList);
-  const totalDiscount = cartDiscount(cartItemsList, true, isDiscountEnabled);
+  const totalDiscount = cartDiscount(cartItemsList, 'good', isDiscountEnabled);
   const payableTotal = cartTotal(subtotal, totalDiscount);
 
   const unitsList = ['all', 'bottle', 'kg', 'liter', 'piece'];
