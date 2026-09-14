@@ -3,7 +3,7 @@ import { LocalStorageDB, STORAGE_KEYS, SEED_SETTINGS } from '../services/db';
 import { inventoryService } from '../services/inventoryService';
 import { billService } from '../services/billService';
 import { settingsService } from '../services/settingsService';
-import { db, collection, doc, query, onSnapshot } from '../services/firebase';
+import { db, collection, doc, query, onSnapshot, getDocs, deleteDoc } from '../services/firebase';
 
 const StoreContext = createContext(null);
 

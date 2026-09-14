@@ -49,7 +49,8 @@ export function DashboardPage() {
     adjustStock, 
     updateSettings,
     deleteBill,
-    syncInventoryToCloud
+    syncInventoryToCloud,
+    cleanDuplicates
   } = useStore();
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'inventory' | 'bills' | 'loyalty' | 'templates' | 'users'
