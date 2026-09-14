@@ -26,7 +26,11 @@ export function StoreProvider({ children }) {
         setLoading(true);
       }
       const [invData, billsData, settData] = await Promise.all([
-        inventoryService.getInventory(),
+        inventoryService.getInventory((remoteInv) => {
+          if (Array.isArray(remoteInv) && remoteInv.length > 0) {
+            setInventory(remoteInv);
+          }
+        }),
         billService.getBills(),
         settingsService.getSettings()
       ]);
@@ -95,6 +99,12 @@ export function StoreProvider({ children }) {
     return updated;
   };
 
+  const handleSyncInventoryToCloud = async () => {
+    const count = await inventoryService.syncAllToFirestore();
+    await loadData(false);
+    return count;
+  };
+
   const handleResetStore = async () => {
     await settingsService.resetToDefaults();
     setInventory(LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []));
@@ -118,6 +128,7 @@ export function StoreProvider({ children }) {
         deleteProduct: handleDeleteProduct,
         adjustStock: handleAdjustStock,
         updateSettings: handleUpdateSettings,
+        syncInventoryToCloud: handleSyncInventoryToCloud,
         resetStore: handleResetStore
       }}
     >

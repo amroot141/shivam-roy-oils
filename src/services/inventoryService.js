@@ -1,4 +1,4 @@
-import { LocalStorageDB, STORAGE_KEYS } from './db';
+import { LocalStorageDB, STORAGE_KEYS, SEED_INVENTORY } from './db';
 import { db, collection, doc, getDocs, setDoc, deleteDoc, withTimeout } from './firebase';
 
 /**
@@ -8,21 +8,67 @@ import { db, collection, doc, getDocs, setDoc, deleteDoc, withTimeout } from './
 export const inventoryService = {
   /**
    * Fetches all inventory items (instant local first, background sync)
+   * @param {Function} [onBackgroundSync] - Callback invoked when remote Firestore data arrives
    * @returns {Promise<Array<Object>>}
    */
-  async getInventory() {
+  async getInventory(onBackgroundSync = null) {
     LocalStorageDB.init();
-    const local = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
+    let local = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
+    if (!Array.isArray(local) || local.length === 0) {
+      local = SEED_INVENTORY;
+      LocalStorageDB.set(STORAGE_KEYS.INVENTORY, local);
+    }
 
-    // Try fast Firestore fetch (max 600ms timeout)
-    const snap = await withTimeout(getDocs(collection(db, 'inventory')), 600, null);
-    if (snap && !snap.empty) {
-      const remoteItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      LocalStorageDB.set(STORAGE_KEYS.INVENTORY, remoteItems);
-      return remoteItems;
+    // Background Firestore sync promise
+    const firestorePromise = getDocs(collection(db, 'inventory')).then(snap => {
+      if (snap && !snap.empty) {
+        const remoteItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        LocalStorageDB.set(STORAGE_KEYS.INVENTORY, remoteItems);
+        if (typeof onBackgroundSync === 'function') {
+          onBackgroundSync(remoteItems);
+        }
+        return remoteItems;
+      } else if (snap && snap.empty) {
+        // If Firestore is empty, seed Firestore in background with local/seed items
+        const itemsToSeed = local.length > 0 ? local : SEED_INVENTORY;
+        itemsToSeed.forEach(item => {
+          setDoc(doc(db, 'inventory', item.id), item).catch(err => 
+            console.warn('Firestore seed push queued:', err.message)
+          );
+        });
+      }
+      return local;
+    }).catch(err => {
+      console.warn('Firestore fetch note:', err.message);
+      return local;
+    });
+
+    // Try fast fetch within 1200ms
+    const remote = await withTimeout(firestorePromise, 1200, null);
+    if (remote && Array.isArray(remote) && remote.length > 0) {
+      return remote;
     }
 
     return local;
+  },
+
+  /**
+   * Pushes all local inventory items to Firestore (manual cloud sync)
+   * @returns {Promise<number>} Number of items synced
+   */
+  async syncAllToFirestore() {
+    LocalStorageDB.init();
+    const list = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, SEED_INVENTORY);
+    if (!Array.isArray(list) || list.length === 0) return 0;
+    
+    let count = 0;
+    for (const prod of list) {
+      await setDoc(doc(db, 'inventory', prod.id), prod).catch(err => 
+        console.warn(`Sync failed for ${prod.id}:`, err.message)
+      );
+      count++;
+    }
+    return count;
   },
 
   /**

@@ -9,7 +9,8 @@ import {
   Check, 
   Package, 
   ArrowUpDown,
-  Download
+  Download,
+  CloudUpload
 } from 'lucide-react';
 import { UnitBadge, StockBadge } from '../common/Badge';
 import { Modal } from '../common/Modal';
@@ -21,13 +22,15 @@ export function InventoryTable({
   onAddProduct, 
   onUpdateProduct, 
   onDeleteProduct, 
-  onAdjustStock 
+  onAdjustStock,
+  onSyncToCloud
 }) {
   const [search, setSearch] = useState('');
   const [selectedUnit, setSelectedUnit] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -142,6 +145,19 @@ export function InventoryTable({
     }
   };
 
+  const handleSyncCloud = async () => {
+    if (!onSyncToCloud) return;
+    setIsSyncing(true);
+    try {
+      const count = await onSyncToCloud();
+      alert(`Successfully synced ${count} inventory item(s) to Cloud (Firestore)! Customer phones will now see all updated items.`);
+    } catch (err) {
+      alert('Cloud sync error: ' + err.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-xs">
       
@@ -159,7 +175,18 @@ export function InventoryTable({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            disabled={isSyncing}
+            onClick={handleSyncCloud}
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 font-bold text-xs rounded-2xl border border-blue-200 transition-colors cursor-pointer disabled:opacity-50"
+            title="Upload/Sync all inventory items to Firestore cloud"
+          >
+            <CloudUpload size={14} className={isSyncing ? 'animate-bounce text-blue-600' : 'text-blue-600'} />
+            <span>{isSyncing ? 'Syncing...' : 'Sync Cloud'}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => exportHelper.exportInventory(inventory, 'csv')}

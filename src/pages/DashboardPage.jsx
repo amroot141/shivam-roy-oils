@@ -48,7 +48,8 @@ export function DashboardPage() {
     deleteProduct, 
     adjustStock, 
     updateSettings,
-    deleteBill
+    deleteBill,
+    syncInventoryToCloud
   } = useStore();
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'inventory' | 'bills' | 'loyalty' | 'templates' | 'users'
@@ -252,6 +253,7 @@ export function DashboardPage() {
             onUpdateProduct={updateProduct}
             onDeleteProduct={deleteProduct}
             onAdjustStock={adjustStock}
+            onSyncToCloud={syncInventoryToCloud}
           />
         </div>
       )}

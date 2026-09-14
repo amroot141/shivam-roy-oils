@@ -41,7 +41,78 @@ const SEED_SETTINGS = {
   receipt_font_size: 'medium'
 };
 
-const SEED_INVENTORY = [];
+const SEED_INVENTORY = [
+  {
+    id: 'prod-mustard-yellow-1l',
+    product_name: 'Pure Yellow Mustard Oil (Kachi Ghani)',
+    unit: 'bottle',
+    stock_quantity: 50,
+    unit_price: 210,
+    discount_type: 'percent',
+    discount_percent: 10,
+    discount_flat: 0
+  },
+  {
+    id: 'prod-mustard-black-1l',
+    product_name: 'Black Mustard Oil (Cold Pressed)',
+    unit: 'bottle',
+    stock_quantity: 40,
+    unit_price: 190,
+    discount_type: 'percent',
+    discount_percent: 8,
+    discount_flat: 0
+  },
+  {
+    id: 'prod-groundnut-1l',
+    product_name: 'Groundnut Oil (Wood Pressed)',
+    unit: 'bottle',
+    stock_quantity: 35,
+    unit_price: 240,
+    discount_type: 'percent',
+    discount_percent: 5,
+    discount_flat: 0
+  },
+  {
+    id: 'prod-sesame-500ml',
+    product_name: 'Pure Sesame (Til) Oil',
+    unit: 'bottle',
+    stock_quantity: 25,
+    unit_price: 180,
+    discount_type: 'percent',
+    discount_percent: 5,
+    discount_flat: 0
+  },
+  {
+    id: 'prod-flaxseed-250ml',
+    product_name: 'Flaxseed (Alsi) Oil',
+    unit: 'bottle',
+    stock_quantity: 20,
+    unit_price: 150,
+    discount_type: 'percent',
+    discount_percent: 0,
+    discount_flat: 0
+  },
+  {
+    id: 'prod-mustard-seeds-1kg',
+    product_name: 'Organic Yellow Mustard Seeds',
+    unit: 'kg',
+    stock_quantity: 60,
+    unit_price: 120,
+    discount_type: 'percent',
+    discount_percent: 0,
+    discount_flat: 0
+  },
+  {
+    id: 'prod-turmeric-500g',
+    product_name: 'Pure Turmeric Powder (Haldi)',
+    unit: 'piece',
+    stock_quantity: 45,
+    unit_price: 140,
+    discount_type: 'percent',
+    discount_percent: 5,
+    discount_flat: 0
+  }
+];
 
 // Helper to generate ISO timestamps for past N days
 function getPastDate(daysAgo, hour = 14, min = 30) {
@@ -104,7 +175,8 @@ export class LocalStorageDB {
       LocalStorageDB.set(STORAGE_KEYS.SETTINGS, merged);
     }
 
-    if (!localStorage.getItem(STORAGE_KEYS.INVENTORY)) {
+    const existingInventory = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, null);
+    if (!existingInventory || !Array.isArray(existingInventory) || existingInventory.length === 0) {
       LocalStorageDB.set(STORAGE_KEYS.INVENTORY, SEED_INVENTORY);
     }
     if (!localStorage.getItem(STORAGE_KEYS.BILLS)) {
