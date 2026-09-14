@@ -34,13 +34,16 @@ export function cartSubtotal(items = []) {
  * @param {boolean} [isEnabled=true]
  * @returns {number} Total discount amount rounded to 2 decimal places
  */
-export function cartDiscount(items = [], feedback = 'none', isEnabled = true) {
-  if (!isEnabled) return 0;
-  if (!Array.isArray(items) || items.length === 0) return 0;
-  // Only apply discount if feedback is 'good' or 'bad'
-  if (feedback !== 'good' && feedback !== 'bad') {
+export function cartDiscount(items = [], feedback = 'good', isEnabled = true) {
+  // Support both (items, isEnabled) and (items, feedback, isEnabled)
+  let enabled = isEnabled;
+  if (typeof feedback === 'boolean') {
+    enabled = feedback;
+  } else if (feedback === 'none') {
     return 0;
   }
+  if (!enabled) return 0;
+  if (!Array.isArray(items) || items.length === 0) return 0;
 
   const discount = items.reduce((acc, item) => {
     const price = Number(item.unit_price) || 0;
@@ -186,4 +189,122 @@ export function buildUpiDeepLink(settings = {}, amount = 0) {
 
   // Default Standard UPI Deep Link
   return `upi://pay?pa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(storeName)}&am=${formattedAmt}&cu=INR&tn=${encodeURIComponent(`Payment to ${storeName}`)}`;
+}
+
+/**
+ * Generates and triggers download of a styled, printable HTML invoice for the bill.
+ * @param {Object} bill
+ * @param {Object} storeSettings
+ */
+export function downloadBillReceipt(bill, storeSettings = {}) {
+  if (!bill) return;
+  const storeName = storeSettings?.store_name || 'Shivam Roy Oils';
+  const address = storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
+  const phone = storeSettings?.phone || '+91 98765 01234';
+  const billId = bill.id || `BILL-${Date.now()}`;
+  const dateStr = bill.created_at ? new Date(bill.created_at).toLocaleString('en-IN') : new Date().toLocaleString('en-IN');
+
+  const itemsRows = (bill.items || []).map((item) => {
+    const hasFlatDisc = item.discount_type === 'flat' && Number(item.discount_flat) > 0;
+    const hasPercentDisc = item.discount_type !== 'flat' && Number(item.discount_percent) > 0;
+    const discountInfo = hasFlatDisc ? ` (₹${item.discount_flat} off)` : hasPercentDisc ? ` (${item.discount_percent}% off)` : '';
+
+    return `
+      <tr>
+        <td style="padding: 9px 8px; border-bottom: 1px solid #e7e5e4;">
+          <strong>${item.product_name || 'Product'}</strong>
+          ${discountInfo ? `<span style="color: #059669; font-size: 11px; display: block;">${discountInfo}</span>` : ''}
+        </td>
+        <td style="padding: 9px 8px; text-align: center; border-bottom: 1px solid #e7e5e4;">${item.quantity} ${item.unit || ''}</td>
+        <td style="padding: 9px 8px; text-align: right; border-bottom: 1px solid #e7e5e4;">₹${item.unit_price}</td>
+        <td style="padding: 9px 8px; text-align: right; font-weight: bold; border-bottom: 1px solid #e7e5e4;">₹${item.line_total}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Invoice - ${billId} - ${storeName}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #fafaf9; margin: 0; padding: 24px; color: #1c1917; }
+    .card { max-width: 480px; margin: 0 auto; background: #ffffff; border: 1px solid #e7e5e4; border-radius: 20px; padding: 28px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    .header { text-align: center; border-bottom: 1px dashed #d6d3d1; padding-bottom: 16px; }
+    .store-title { font-size: 22px; font-weight: 800; color: #b45309; margin: 0 0 4px 0; }
+    .store-info { font-size: 12px; color: #78716c; margin: 2px 0; }
+    .bill-badge { display: inline-block; background: #f5f5f4; font-family: monospace; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; margin-top: 8px; color: #44403c; }
+    .meta { font-size: 12px; padding: 14px 0; border-bottom: 1px dashed #d6d3d1; }
+    .meta-row { display: flex; justify-content: space-between; margin: 4px 0; }
+    .meta-lbl { color: #a8a29e; }
+    .meta-val { font-weight: 600; color: #292524; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 16px 0; }
+    th { text-align: left; padding: 8px; color: #78716c; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #d6d3d1; }
+    .totals { border-top: 1px dashed #d6d3d1; padding-top: 12px; font-size: 13px; }
+    .tot-row { display: flex; justify-content: space-between; margin: 5px 0; }
+    .savings { background: #ecfdf5; color: #059669; font-weight: 700; padding: 6px 10px; border-radius: 10px; margin: 6px 0; }
+    .grand { font-size: 18px; font-weight: 900; color: #b45309; border-top: 1px solid #e7e5e4; padding-top: 10px; margin-top: 8px; }
+    .footer { text-align: center; font-size: 11px; color: #a8a29e; margin-top: 24px; padding-top: 16px; border-top: 1px dashed #d6d3d1; }
+    @media print {
+      body { background: white; padding: 0; }
+      .card { border: none; box-shadow: none; max-width: 100%; padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1 class="store-title">${storeName}</h1>
+      <div class="store-info">${address}</div>
+      <div class="store-info">Phone: ${phone}</div>
+      <div class="bill-badge">${billId}</div>
+    </div>
+    <div class="meta">
+      <div class="meta-row"><span class="meta-lbl">Date & Time:</span><span class="meta-val">${dateStr}</span></div>
+      <div class="meta-row"><span class="meta-lbl">Customer:</span><span class="meta-val">${bill.customer_name || 'Walk-in Customer'}</span></div>
+      ${bill.phone ? `<div class="meta-row"><span class="meta-lbl">Phone:</span><span class="meta-val">${bill.phone}</span></div>` : ''}
+      ${bill.address ? `<div class="meta-row"><span class="meta-lbl">Address:</span><span class="meta-val">${bill.address}</span></div>` : ''}
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th style="text-align:center;">Qty</th>
+          <th style="text-align:right;">Rate</th>
+          <th style="text-align:right;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsRows}
+      </tbody>
+    </table>
+    <div class="totals">
+      <div class="tot-row"><span>Subtotal:</span><span>₹${bill.subtotal}</span></div>
+      ${bill.discount_amount > 0 ? `<div class="tot-row savings"><span>Discount Applied:</span><span>- ₹${bill.discount_amount}</span></div>` : ''}
+      <div class="tot-row grand"><span>Final Paid:</span><span>₹${bill.total_amount}</span></div>
+      <div class="tot-row" style="font-size:11px; color:#78716c; margin-top:6px;"><span>Payment Method:</span><span style="font-weight:700; text-transform:uppercase;">${bill.payment_method}</span></div>
+      ${bill.payment_method === 'cash' && bill.cash_given ? `
+        <div class="tot-row" style="font-size:11px; color:#78716c;"><span>Cash Given:</span><span>₹${bill.cash_given}</span></div>
+        <div class="tot-row" style="font-size:11px; color:#059669; font-weight:700;"><span>Change Returned:</span><span>₹${bill.change_returned || 0}</span></div>
+      ` : ''}
+    </div>
+    <div class="footer">
+      <p>Thank you for your purchase with ${storeName}!</p>
+      <p style="margin-top: 4px;">Visit us again soon.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${storeName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${billId}.html`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }

@@ -18,14 +18,16 @@ export function Step3Payment({
   paymentInfo, 
   setPaymentInfo, 
   subtotal, 
+  discount = 0,
+  total,
   settings, 
   onNext, 
   onPrev 
 }) {
   const [cashError, setCashError] = useState('');
 
-  // Initial estimate total (without discount until step 4 feedback)
-  const currentTotal = subtotal;
+  // Discounted total payable amount
+  const currentTotal = total !== undefined ? total : Math.max(0, Math.round((subtotal - discount) * 100) / 100);
 
   // Construct UPI deep link URL (supports custom template override if set in settings)
   const upiVpa = settings?.upi_vpa || 'shivamroyoils@upi';
@@ -74,9 +76,14 @@ export function Step3Payment({
             Choose your preferred checkout method.
           </p>
           
-          <div className="inline-flex items-center gap-2 mt-3 px-3 py-1 bg-amber-50 rounded-full border border-amber-200 text-xs text-amber-900 font-semibold">
-            <span>Bill Amount:</span>
-            <span className="text-sm font-extrabold text-amber-700">{formatCurrency(currentTotal)}</span>
+          <div className="inline-flex items-center gap-2 mt-3 px-4 py-1.5 bg-amber-50 rounded-full border border-amber-200 text-xs text-amber-900 font-semibold flex-wrap justify-center">
+            <span>Subtotal: <strong>{formatCurrency(subtotal)}</strong></span>
+            {discount > 0 && (
+              <span className="text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full font-bold">
+                Save -{formatCurrency(discount)}
+              </span>
+            )}
+            <span>Payable: <strong className="text-sm font-extrabold text-amber-700">{formatCurrency(currentTotal)}</strong></span>
           </div>
         </div>
 
@@ -227,7 +234,7 @@ export function Step3Payment({
             onClick={handleProceed}
             className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold shadow-md shadow-amber-600/20 active:scale-98 cursor-pointer transition-all text-sm"
           >
-            <span>Proceed to Feedback &amp; Discount</span>
+            <span>Proceed to Feedback &amp; Download Bill</span>
             <ArrowRight size={18} />
           </button>
         </div>

@@ -140,6 +140,12 @@ export function StoreProvider({ children }) {
     return res;
   };
 
+  const handleUpdateBillFeedback = async (id, feedback) => {
+    const res = await billService.updateBillFeedback(id, feedback);
+    setBills(prev => prev.map(b => b.id === id ? { ...b, feedback } : b));
+    return res;
+  };
+
   const handleAdjustStock = async (id, delta) => {
     const updated = await inventoryService.adjustStock(id, delta);
     setInventory(prev => prev.map(p => p.id === id ? updated : p));
@@ -176,6 +182,7 @@ export function StoreProvider({ children }) {
         refresh: () => loadData(false),
         createBill: handleCreateBill,
         deleteBill: handleDeleteBill,
+        updateBillFeedback: handleUpdateBillFeedback,
         addProduct: handleAddProduct,
         updateProduct: handleUpdateProduct,
         deleteProduct: handleDeleteProduct,

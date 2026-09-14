@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { StepProgressBar } from '../components/checkout/StepProgressBar';
 import { Step1Details } from '../components/checkout/Step1Details';
 import { Step2Items } from '../components/checkout/Step2Items';
 import { Step3Payment } from '../components/checkout/Step3Payment';
 import { Step4Feedback } from '../components/checkout/Step4Feedback';
-import { CheckoutReceipt } from '../components/checkout/CheckoutReceipt';
 import { cartSubtotal, cartDiscount, cartTotal, buildBillItems } from '../utils/cart';
 
 export function CheckoutPage() {
-  const { inventory, settings, createBill, loading } = useStore();
+  const { inventory, settings, createBill, updateBillFeedback, loading } = useStore();
   const isDiscountEnabled = settings?.self_checkout_discount_enabled !== false;
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -37,7 +36,7 @@ export function CheckoutPage() {
   });
 
   // Feedback State: 'good' | 'bad' | 'none'
-  const [feedback, setFeedback] = useState('good'); // Default prompt to encourage positive feedback
+  const [feedback, setFeedback] = useState('good'); // Default positive prompt
 
   const allInventory = [...inventory, ...customProducts];
 
@@ -61,6 +60,8 @@ export function CheckoutPage() {
     });
 
   const subtotal = cartSubtotal(cartItemsList);
+  const discount = cartDiscount(cartItemsList, true, isDiscountEnabled);
+  const total = cartTotal(subtotal, discount);
 
   const goToStep = (step) => {
     setCurrentStep(step);
@@ -80,7 +81,7 @@ export function CheckoutPage() {
   const handleSubmitBill = async () => {
     setSubmitting(true);
     try {
-      const billDiscount = cartDiscount(cartItemsList, feedback, isDiscountEnabled);
+      const billDiscount = cartDiscount(cartItemsList, true, isDiscountEnabled);
       const finalTotal = cartTotal(subtotal, billDiscount);
 
       const billData = {
@@ -88,7 +89,7 @@ export function CheckoutPage() {
         phone: customerInfo.phone,
         address: customerInfo.address,
         items: buildBillItems(cartItemsList, allInventory),
-        num_items: cartItemsList.reduce((acc, i) => acc + i.quantity, 0),
+        num_items: cartItemsList.reduce((acc, i) => acc + (Number(i.quantity) || 0), 0),
         subtotal,
         discount_amount: billDiscount,
         total_amount: finalTotal,
@@ -103,11 +104,29 @@ export function CheckoutPage() {
 
       const created = await createBill(billData);
       setCompletedBill(created);
+      return created;
     } catch (err) {
       console.error('Checkout error:', err);
       alert('Failed to complete checkout: ' + err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleProceedToStep4 = async () => {
+    goToStep(4);
+    if (!completedBill && !submitting) {
+      await handleSubmitBill();
+    }
+  };
+
+  const handleSelectFeedback = async (sentiment) => {
+    setFeedback(sentiment);
+    if (completedBill) {
+      setCompletedBill(prev => ({ ...prev, feedback: sentiment }));
+      if (updateBillFeedback) {
+        await updateBillFeedback(completedBill.id, sentiment);
+      }
     }
   };
 
@@ -121,6 +140,13 @@ export function CheckoutPage() {
     setFeedback('good');
   };
 
+  // Auto-submit bill when reaching step 4 if not yet generated
+  useEffect(() => {
+    if (currentStep === 4 && !completedBill && !submitting && cartItemsList.length > 0) {
+      handleSubmitBill();
+    }
+  }, [currentStep, completedBill, submitting, cartItemsList.length]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50 text-stone-500">
@@ -128,19 +154,6 @@ export function CheckoutPage() {
           <div className="w-10 h-10 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="font-semibold text-sm">Loading Shivam Roy Oils Store...</p>
         </div>
-      </div>
-    );
-  }
-
-  // If checkout has finished, render success receipt
-  if (completedBill) {
-    return (
-      <div className="min-h-[calc(100vh-4rem)] bg-stone-50/60 px-4 py-8">
-        <CheckoutReceipt
-          bill={completedBill}
-          storeSettings={settings}
-          onReset={handleResetCheckout}
-        />
       </div>
     );
   }
@@ -183,8 +196,10 @@ export function CheckoutPage() {
             paymentInfo={paymentInfo}
             setPaymentInfo={setPaymentInfo}
             subtotal={subtotal}
+            discount={discount}
+            total={total}
             settings={settings}
-            onNext={handleNext}
+            onNext={handleProceedToStep4}
             onPrev={handlePrev}
           />
         )}
@@ -192,12 +207,10 @@ export function CheckoutPage() {
         {currentStep === 4 && (
           <Step4Feedback
             feedback={feedback}
-            setFeedback={setFeedback}
-            cartItemsList={cartItemsList}
-            paymentInfo={paymentInfo}
-            isDiscountEnabled={isDiscountEnabled}
-            onSubmitBill={handleSubmitBill}
-            onPrev={handlePrev}
+            onSelectFeedback={handleSelectFeedback}
+            bill={completedBill}
+            storeSettings={settings}
+            onReset={handleResetCheckout}
             submitting={submitting}
           />
         )}

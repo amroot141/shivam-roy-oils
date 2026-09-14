@@ -14,7 +14,7 @@ import {
 import { UnitBadge } from '../common/Badge';
 import { DecimalQtyModal } from '../common/DecimalQtyModal';
 import { formatCurrency } from '../../utils/formatters';
-import { cartSubtotal, cartNumItems } from '../../utils/cart';
+import { cartSubtotal, cartNumItems, cartDiscount, cartTotal } from '../../utils/cart';
 
 export function Step2Items({ 
   inventory = [], 
@@ -72,26 +72,23 @@ export function Step2Items({
     }
   };
 
-  // Compute live cart subtotal and potential feedback discount
+  // Compute live cart subtotal, discount, and exact payable amount
   const cartItemsList = Object.entries(cart).map(([id, qty]) => {
     const prod = inventory.find(p => p.id === id);
     return {
       id,
       quantity: qty,
       unit_price: prod?.unit_price || 0,
-      discount_percent: prod?.discount_percent || 0
+      discount_type: prod?.discount_type || 'percent',
+      discount_percent: prod?.discount_percent || 0,
+      discount_flat: prod?.discount_flat || 0
     };
   });
 
   const subtotal = cartSubtotal(cartItemsList);
   const totalCount = cartNumItems(cartItemsList);
-  
-  // Potential feedback savings (only if enabled by admin)
-  const potentialSavings = isDiscountEnabled
-    ? cartItemsList.reduce((acc, item) => {
-        return acc + ((item.unit_price * (item.discount_percent || 0) / 100) * item.quantity);
-      }, 0)
-    : 0;
+  const totalDiscount = cartDiscount(cartItemsList, true, isDiscountEnabled);
+  const payableTotal = cartTotal(subtotal, totalDiscount);
 
   const unitsList = ['all', 'bottle', 'kg', 'liter', 'piece'];
 
@@ -144,7 +141,17 @@ export function Step2Items({
           {filteredInventory.map(product => {
             const qty = getItemQty(product.id);
             const isOutOfStock = (Number(product.stock_quantity) || 0) <= 0;
-            const hasDiscount = Number(product.discount_percent) > 0;
+            const unitPrice = Number(product.unit_price) || 0;
+            const discountType = product.discount_type || 'percent';
+            const hasFlatDisc = discountType === 'flat' && Number(product.discount_flat) > 0;
+            const hasPercentDisc = discountType !== 'flat' && Number(product.discount_percent) > 0;
+            const hasDiscount = (hasFlatDisc || hasPercentDisc) && isDiscountEnabled;
+            const discAmt = hasFlatDisc 
+              ? Math.min(Number(product.discount_flat) || 0, unitPrice)
+              : hasPercentDisc
+              ? (unitPrice * (Number(product.discount_percent) || 0) / 100)
+              : 0;
+            const effectiveUnitPrice = Math.max(0, Math.round((unitPrice - discAmt) * 100) / 100);
 
             return (
               <div 
@@ -159,6 +166,12 @@ export function Step2Items({
                   {/* Top Badges — stock count hidden from customers */}
                   <div className="flex items-center gap-2 mb-2">
                     <UnitBadge unit={product.unit} />
+                    {hasDiscount && (
+                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                        <Sparkles size={10} className="text-emerald-600" />
+                        {hasFlatDisc ? `₹${product.discount_flat} OFF` : `${product.discount_percent}% OFF`}
+                      </span>
+                    )}
                   </div>
 
                   {/* Product Title */}
@@ -166,11 +179,11 @@ export function Step2Items({
                     {product.product_name}
                   </h3>
 
-                  {/* Feedback Discount Promo Tag */}
-                  {hasDiscount && isDiscountEnabled && (
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-50 to-yellow-100 border border-amber-200/80 text-amber-900 text-xs font-semibold mt-2">
-                      <Sparkles size={12} className="text-amber-600 animate-pulse" />
-                      <span>Feedback discount: up to <strong className="text-amber-700">{product.discount_percent}% OFF</strong></span>
+                  {/* Discount Promo Tag */}
+                  {hasDiscount && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold mt-2">
+                      <Sparkles size={12} className="text-emerald-600" />
+                      <span>Instant discount applied on this item!</span>
                     </div>
                   )}
                 </div>
@@ -178,10 +191,25 @@ export function Step2Items({
                 {/* Bottom Row: Price & Quantity Stepper */}
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-stone-100">
                   <div>
-                    <span className="text-xs text-stone-400 block">Unit Price</span>
-                    <span className="text-lg font-extrabold text-stone-900">
-                      {formatCurrency(product.unit_price)}
-                    </span>
+                    <span className="text-[11px] text-stone-400 block font-medium">Unit Price</span>
+                    {hasDiscount ? (
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-stone-400 line-through">
+                            {formatCurrency(unitPrice)}
+                          </span>
+                        </div>
+                        <span className="text-lg font-black text-emerald-700 font-heading">
+                          {formatCurrency(effectiveUnitPrice)}
+                          <span className="text-xs font-normal text-stone-500 font-sans"> / {product.unit}</span>
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-lg font-extrabold text-stone-900">
+                        {formatCurrency(unitPrice)}
+                        <span className="text-xs font-normal text-stone-500"> / {product.unit}</span>
+                      </span>
+                    )}
                   </div>
 
                   {/* Counter Steppers with Decimal Edit */}
@@ -255,18 +283,25 @@ export function Step2Items({
             </button>
 
             <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-stone-500 font-medium">Cart:</span>
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-stone-900 bg-stone-100 px-2 py-0.5 rounded-md">
                   {totalCount} item{totalCount !== 1 ? 's' : ''}
                 </span>
-                <span className="text-lg font-extrabold text-stone-900">
-                  {formatCurrency(subtotal)}
-                </span>
+                {totalDiscount > 0 && (
+                  <span className="text-xs text-stone-400 line-through">
+                    {formatCurrency(subtotal)}
+                  </span>
+                )}
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xs text-stone-500 font-medium">To Pay:</span>
+                  <span className="text-xl font-black text-amber-700">
+                    {formatCurrency(payableTotal)}
+                  </span>
+                </div>
               </div>
-              {potentialSavings > 0 && (
-                <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-                  <Sparkles size={11} /> Next step: review &amp; save {formatCurrency(potentialSavings)}!
+              {totalDiscount > 0 && (
+                <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
+                  <Sparkles size={11} /> You save {formatCurrency(totalDiscount)} with store discount!
                 </span>
               )}
             </div>
@@ -282,7 +317,7 @@ export function Step2Items({
                 : 'bg-stone-200 text-stone-400 cursor-not-allowed shadow-none'
             }`}
           >
-            <span>Proceed to Payment</span>
+            <span>Proceed to Payment ({formatCurrency(payableTotal)})</span>
             <ArrowRight size={18} />
           </button>
 

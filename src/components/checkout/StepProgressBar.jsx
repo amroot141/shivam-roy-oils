@@ -1,11 +1,11 @@
 import React from 'react';
-import { User, ShoppingCart, CreditCard, MessageSquareHeart, Check } from 'lucide-react';
+import { User, ShoppingCart, CreditCard, FileCheck2, Check } from 'lucide-react';
 
 const STEPS = [
   { id: 1, label: 'Details', icon: User },
-  { id: 2, label: 'Items', icon: ShoppingCart },
+  { id: 2, label: 'Items & Amount', icon: ShoppingCart },
   { id: 3, label: 'Payment', icon: CreditCard },
-  { id: 4, label: 'Feedback', icon: MessageSquareHeart }
+  { id: 4, label: 'Feedback & Bill', icon: FileCheck2 }
 ];
 
 export function StepProgressBar({ currentStep, onStepClick, maxStepReached = 1 }) {

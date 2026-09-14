@@ -110,5 +110,23 @@ export const billService = {
     );
 
     return true;
+  },
+
+  /**
+   * Updates feedback on an existing bill
+   * @param {string} id
+   * @param {string} feedback
+   */
+  async updateBillFeedback(id, feedback) {
+    const bills = LocalStorageDB.get(STORAGE_KEYS.BILLS, []);
+    const bill = bills.find(b => b.id === id);
+    if (bill) {
+      bill.feedback = feedback;
+      LocalStorageDB.set(STORAGE_KEYS.BILLS, bills);
+      setDoc(doc(db, 'bills', id), { feedback }, { merge: true }).catch(err =>
+        console.warn('Firestore feedback update queued locally:', err.message)
+      );
+    }
+    return bill;
   }
 };

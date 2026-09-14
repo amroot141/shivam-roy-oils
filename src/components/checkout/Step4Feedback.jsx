@@ -1,44 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   ThumbsUp, 
   ThumbsDown, 
   Sparkles, 
   CheckCircle2, 
-  ArrowLeft, 
-  ShoppingBag,
-  Gift,
-  HelpCircle
+  Printer, 
+  Download, 
+  ShoppingBag, 
+  Check,
+  Heart
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { formatCurrency } from '../../utils/formatters';
-import { cartSubtotal, cartDiscount, cartTotal } from '../../utils/cart';
+import { formatCurrency, formatDate, formatPhone } from '../../utils/formatters';
+import { downloadBillReceipt } from '../../utils/cart';
 
 export function Step4Feedback({ 
-  feedback, 
-  setFeedback, 
-  cartItemsList = [], 
-  paymentInfo, 
-  isDiscountEnabled = true,
-  onSubmitBill, 
-  onPrev,
+  feedback = 'good', 
+  onSelectFeedback, 
+  bill, 
+  storeSettings = {}, 
+  onReset,
   submitting = false
 }) {
-  const [unlocked, setUnlocked] = useState(feedback === 'good' || feedback === 'bad');
-
-  const subtotal = cartSubtotal(cartItemsList);
-  const discount = cartDiscount(cartItemsList, feedback, isDiscountEnabled);
-  const total = cartTotal(subtotal, discount);
-
-  // Recalculate change returned based on the post-discount total
-  const adjustedChange = paymentInfo.payment_method === 'cash' && paymentInfo.cash_given
-    ? Math.max(0, Math.round((Number(paymentInfo.cash_given) - total) * 100) / 100)
-    : 0;
+  const [downloaded, setDownloaded] = useState(false);
 
   const triggerConfetti = () => {
     try {
       confetti({
-        particleCount: 80,
-        spread: 70,
+        particleCount: 70,
+        spread: 60,
         origin: { y: 0.6 },
         colors: ['#d97706', '#fbbf24', '#10b981', '#f59e0b']
       });
@@ -47,193 +37,310 @@ export function Step4Feedback({
     }
   };
 
-  const handleSelectFeedback = (sentiment) => {
-    setFeedback(sentiment);
-    if (sentiment === 'good' || sentiment === 'bad') {
-      setUnlocked(true);
-      if (isDiscountEnabled) {
-        triggerConfetti();
-      }
-    } else {
-      setUnlocked(false);
+  const handleFeedbackClick = (sentiment) => {
+    if (onSelectFeedback) {
+      onSelectFeedback(sentiment);
     }
+    triggerConfetti();
   };
 
-  return (
-    <div className="max-w-xl mx-auto py-6">
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-sm">
-        
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-amber-100 text-amber-800 rounded-2xl mb-3 shadow-inner">
-            <Gift size={24} className="animate-bounce" />
-          </div>
-          <h2 className="text-2xl font-bold text-stone-900 font-heading">
-            {isDiscountEnabled ? 'Feedback & Instant Savings' : 'Customer Feedback'}
-          </h2>
-          <p className="text-sm text-stone-500 mt-1 max-w-md mx-auto">
-            {isDiscountEnabled
-              ? 'Rate your store shopping experience today to unlock instant product-level discounts on your bill!'
-              : 'Rate your store shopping experience today to help us serve you better!'}
-          </p>
-        </div>
+  const handleDownload = () => {
+    if (!bill) return;
+    downloadBillReceipt(bill, storeSettings);
+    setDownloaded(true);
+    setTimeout(() => setDownloaded(false), 3000);
+  };
 
-        {/* Feedback Selection Buttons */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const storeName = storeSettings?.store_name || 'Shivam Roy Oils';
+  const storeAddress = storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
+  const storePhone = storeSettings?.phone || '+91 98765 01234';
+
+  if (submitting || !bill) {
+    return (
+      <div className="max-w-xl mx-auto py-16 text-center">
+        <div className="w-12 h-12 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <h3 className="font-heading font-bold text-lg text-stone-900">Finalizing Your Bill...</h3>
+        <p className="text-xs text-stone-500 mt-1">Please wait while we record your order.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-xl mx-auto py-6 space-y-6">
+      
+      {/* 1. Success Banner */}
+      <div className="text-center no-print">
+        <div className="inline-flex items-center justify-center w-14 h-14 bg-emerald-100 text-emerald-600 rounded-3xl mb-3 shadow-md shadow-emerald-500/20">
+          <CheckCircle2 size={32} className="stroke-[2.5]" />
+        </div>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 font-heading">
+          Payment &amp; Checkout Complete!
+        </h2>
+        <p className="text-xs sm:text-sm text-stone-500 mt-1">
+          Thank you, <strong className="text-stone-800">{bill.customer_name || 'Valued Customer'}</strong>! Your bill is ready below.
+        </p>
+      </div>
+
+      {/* 2. Customer Feedback Section */}
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-xs no-print">
+        <div className="flex items-center gap-2 mb-3">
+          <Heart size={18} className="text-rose-500 fill-rose-500" />
+          <h3 className="font-heading font-bold text-stone-900 text-sm sm:text-base">
+            How was your shopping experience?
+          </h3>
+        </div>
+        <p className="text-xs text-stone-500 mb-4">
+          Your feedback helps us continuously improve our cold-pressed quality and counter speed.
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
           {/* Good Feedback */}
           <button
             type="button"
-            onClick={() => handleSelectFeedback('good')}
-            className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${
+            onClick={() => handleFeedbackClick('good')}
+            className={`p-3.5 rounded-2xl border-2 flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
               feedback === 'good'
-                ? 'border-emerald-500 bg-emerald-50/70 ring-4 ring-emerald-500/20 shadow-md scale-102'
+                ? 'border-emerald-500 bg-emerald-50/80 ring-4 ring-emerald-500/20 shadow-sm scale-101'
                 : 'border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/30'
             }`}
           >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-              feedback === 'good' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-stone-100 text-stone-600'
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+              feedback === 'good' ? 'bg-emerald-500 text-white' : 'bg-stone-100 text-stone-600'
             }`}>
-              <ThumbsUp size={24} />
+              <ThumbsUp size={16} />
             </div>
-            <span className="font-bold text-sm text-stone-900">Good Shopping</span>
-            <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-100/80 px-2 py-0.5 rounded-full">
-              {isDiscountEnabled ? 'Unlocks Full Discount' : 'Feedback Recorded'}
-            </span>
+            <div className="text-left">
+              <span className="block font-bold text-xs text-stone-900 leading-tight">Good Shopping</span>
+              <span className="text-[10px] text-emerald-700 font-semibold">Positive</span>
+            </div>
           </button>
 
-          {/* Bad Feedback */}
+          {/* Constructive / Needs Work */}
           <button
             type="button"
-            onClick={() => handleSelectFeedback('bad')}
-            className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${
+            onClick={() => handleFeedbackClick('bad')}
+            className={`p-3.5 rounded-2xl border-2 flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
               feedback === 'bad'
-                ? 'border-amber-500 bg-amber-50/70 ring-4 ring-amber-500/20 shadow-md scale-102'
+                ? 'border-amber-500 bg-amber-50/80 ring-4 ring-amber-500/20 shadow-sm scale-101'
                 : 'border-stone-200 hover:border-amber-300 hover:bg-amber-50/30'
             }`}
           >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-              feedback === 'bad' ? 'bg-amber-600 text-white shadow-sm' : 'bg-stone-100 text-stone-600'
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+              feedback === 'bad' ? 'bg-amber-600 text-white' : 'bg-stone-100 text-stone-600'
             }`}>
-              <ThumbsDown size={24} />
+              <ThumbsDown size={16} />
             </div>
-            <span className="font-bold text-sm text-stone-900">Needs Work</span>
-            <span className="text-[11px] text-amber-800 font-semibold bg-amber-100/80 px-2 py-0.5 rounded-full">
-              {isDiscountEnabled ? 'Unlocks Full Discount' : 'Feedback Recorded'}
-            </span>
+            <div className="text-left">
+              <span className="block font-bold text-xs text-stone-900 leading-tight">Needs Work</span>
+              <span className="text-[10px] text-amber-800 font-semibold">Constructive</span>
+            </div>
           </button>
         </div>
+      </div>
 
-        {/* Dynamic Discount / Status Banner */}
-        {!isDiscountEnabled ? (
-          <div className="p-3.5 bg-stone-100 text-stone-600 text-xs rounded-2xl mb-6 flex items-center gap-2.5 border border-stone-200">
-            <HelpCircle size={16} className="text-stone-400 shrink-0" />
-            <span>Store self-checkout discount is currently turned off by admin. Standard pricing applies.</span>
+      {/* 3. Download & Print Action Buttons */}
+      <div className="grid grid-cols-2 gap-3 no-print">
+        <button
+          type="button"
+          onClick={handleDownload}
+          className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20 active:scale-98 transition-all cursor-pointer"
+        >
+          {downloaded ? (
+            <>
+              <Check size={16} className="text-emerald-300 stroke-[3]" />
+              <span>Bill Downloaded!</span>
+            </>
+          ) : (
+            <>
+              <Download size={16} />
+              <span>Download Bill</span>
+            </>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={handlePrint}
+          className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs sm:text-sm shadow-md active:scale-98 transition-all cursor-pointer"
+        >
+          <Printer size={16} />
+          <span>Print Bill</span>
+        </button>
+      </div>
+
+      {/* 4. Complete Bill & Receipt Display */}
+      <div 
+        id="printable-receipt"
+        className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-md relative overflow-hidden"
+      >
+        {/* Top Gold Accent Bar */}
+        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500" />
+
+        {/* Store Title */}
+        <div className="text-center pb-4 border-b border-dashed border-stone-300">
+          <h3 className="font-heading font-extrabold text-lg text-stone-900">
+            {storeName}
+          </h3>
+          <p className="text-xs text-stone-500 mt-0.5">
+            {storeAddress}
+          </p>
+          {storePhone && (
+            <p className="text-[11px] text-stone-400 mt-0.5">
+              Phone: {storePhone}
+            </p>
+          )}
+          <div className="inline-block bg-stone-100 text-stone-700 px-3 py-1 rounded-full text-xs font-mono font-bold mt-2">
+            Bill #{bill.id}
           </div>
-        ) : unlocked && discount > 0 ? (
-          <div className="p-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl shadow-md mb-6 flex items-center justify-between animate-fadeIn">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-xl">
-                <Sparkles size={22} className="text-yellow-200" />
-              </div>
-              <div>
-                <span className="text-xs uppercase font-bold tracking-wider text-emerald-100 block">
-                  Reward Unlocked!
-                </span>
-                <p className="font-extrabold text-base">
-                  You saved {formatCurrency(discount)} on this visit!
-                </p>
-              </div>
+        </div>
+
+        {/* Customer & Timestamp Meta */}
+        <div className="py-3 border-b border-dashed border-stone-300 text-xs space-y-1 text-stone-600">
+          <div className="flex justify-between">
+            <span className="text-stone-400">Date &amp; Time:</span>
+            <span>{formatDate(bill.created_at)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-stone-400">Customer Name:</span>
+            <span className="font-medium text-stone-800">{bill.customer_name || 'Walk-in Customer'}</span>
+          </div>
+          {bill.phone && (
+            <div className="flex justify-between">
+              <span className="text-stone-400">Phone:</span>
+              <span className="font-medium text-stone-800">{formatPhone(bill.phone)}</span>
             </div>
-            <span className="text-2xl font-black text-yellow-300">
-              - {formatCurrency(discount)}
-            </span>
-          </div>
-        ) : (
-          <div className="p-3 bg-stone-100 text-stone-600 text-xs rounded-2xl mb-6 flex items-center gap-2">
-            <HelpCircle size={16} className="text-stone-400 shrink-0" />
-            <span>Select &quot;Good Shopping&quot; or &quot;Needs Work&quot; to unlock product discounts!</span>
-          </div>
-        )}
+          )}
+          {bill.address && (
+            <div className="flex justify-between">
+              <span className="text-stone-400">Address:</span>
+              <span className="font-medium text-stone-800 text-right max-w-[200px] truncate">{bill.address}</span>
+            </div>
+          )}
+        </div>
 
-        {/* Itemized Total Summary */}
-        <div className="bg-stone-50 rounded-2xl p-5 border border-stone-200 space-y-2 text-sm">
+        {/* Items List */}
+        <div className="py-4 border-b border-dashed border-stone-300">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-stone-400 font-medium pb-2 border-b border-stone-100 text-left">
+                <th className="pb-1.5">Item</th>
+                <th className="text-center pb-1.5">Qty</th>
+                <th className="text-right pb-1.5">Rate</th>
+                <th className="text-right pb-1.5">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-100">
+              {(bill.items || []).map((item, idx) => {
+                const hasFlatDisc = item.discount_type === 'flat' && Number(item.discount_flat) > 0;
+                const hasPercentDisc = item.discount_type !== 'flat' && Number(item.discount_percent) > 0;
+
+                return (
+                  <tr key={idx}>
+                    <td className="py-2 text-stone-900 font-medium max-w-[150px]">
+                      {item.product_name}
+                      {(hasFlatDisc || hasPercentDisc) && (
+                        <span className="block text-[10px] text-emerald-600 font-semibold">
+                          ({hasFlatDisc ? `₹${item.discount_flat} off` : `${item.discount_percent}% off`} applied)
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 text-center text-stone-600">
+                      {item.quantity} {item.unit}
+                    </td>
+                    <td className="py-2 text-right text-stone-600">
+                      ₹{item.unit_price}
+                    </td>
+                    <td className="py-2 text-right font-bold text-stone-900">
+                      ₹{item.line_total}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Totals & Discounts */}
+        <div className="py-4 border-b border-dashed border-stone-300 space-y-2 text-xs">
           <div className="flex justify-between text-stone-600">
-            <span>Subtotal ({cartItemsList.length} items):</span>
-            <span className="font-semibold text-stone-900">{formatCurrency(subtotal)}</span>
+            <span>Subtotal:</span>
+            <span className="font-bold text-stone-900">{formatCurrency(bill.subtotal)}</span>
           </div>
 
-          <div className="flex justify-between items-center text-stone-600">
-            <span className="flex items-center gap-1.5">
-              <span>Feedback Discount:</span>
-              {!isDiscountEnabled ? (
-                <span className="text-[11px] bg-stone-200 text-stone-600 px-1.5 py-0.2 rounded font-medium">
-                  DISABLED
-                </span>
-              ) : unlocked ? (
-                <span className="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">
-                  APPLIED
-                </span>
-              ) : (
-                <span className="text-[11px] bg-stone-200 text-stone-600 px-1.5 py-0.2 rounded">
-                  LOCKED
-                </span>
-              )}
-            </span>
-            <span className={isDiscountEnabled && unlocked && discount > 0 ? 'text-emerald-600 font-bold text-base' : 'text-stone-400'}>
-              {isDiscountEnabled && unlocked && discount > 0 ? `- ${formatCurrency(discount)}` : '₹0'}
-            </span>
-          </div>
-
-          <div className="flex justify-between text-stone-600 text-xs pt-1">
-            <span>Payment Mode:</span>
-            <span className="uppercase font-semibold text-stone-800">{paymentInfo.payment_method}</span>
-          </div>
-
-          {paymentInfo.payment_method === 'cash' && (
-            <div className="flex justify-between text-xs text-stone-600">
-              <span>Adjusted Change Returned:</span>
-              <span className="font-bold text-emerald-700">{formatCurrency(adjustedChange)}</span>
+          {Number(bill.discount_amount) > 0 ? (
+            <div className="flex justify-between text-emerald-600 font-bold bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+              <span className="flex items-center gap-1">
+                <Sparkles size={13} /> Store Discount Savings:
+              </span>
+              <span>- {formatCurrency(bill.discount_amount)}</span>
+            </div>
+          ) : (
+            <div className="flex justify-between text-stone-400">
+              <span>Discount Savings:</span>
+              <span>₹0.00</span>
             </div>
           )}
 
-          <div className="pt-3 border-t border-stone-200 flex justify-between items-center">
-            <span className="text-base font-extrabold text-stone-950 font-heading">
-              Final Payable Amount:
-            </span>
-            <span className="text-2xl font-black text-amber-700">
-              {formatCurrency(total)}
-            </span>
+          <div className="flex justify-between text-lg font-black text-stone-950 pt-2 border-t border-stone-200">
+            <span>Final Paid:</span>
+            <span className="text-amber-700">{formatCurrency(bill.total_amount)}</span>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-3 mt-6">
-          <button
-            type="button"
-            onClick={onPrev}
-            disabled={submitting}
-            className="flex items-center gap-1.5 px-4 py-3.5 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs transition-colors cursor-pointer"
-          >
-            <ArrowLeft size={16} />
-            <span>Back</span>
-          </button>
+        {/* Payment and Feedback Meta */}
+        <div className="pt-3 text-xs space-y-1">
+          <div className="flex justify-between">
+            <span className="text-stone-400">Payment Mode:</span>
+            <span className="font-bold uppercase text-stone-800">{bill.payment_method}</span>
+          </div>
 
-          <button
-            type="button"
-            onClick={onSubmitBill}
-            disabled={submitting || (feedback !== 'good' && feedback !== 'bad')}
-            className={`flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-2xl text-white font-extrabold text-base shadow-lg transition-all ${
-              submitting || (feedback !== 'good' && feedback !== 'bad')
-                ? 'bg-stone-400 cursor-not-allowed shadow-none opacity-80'
-                : 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 shadow-amber-600/30 active:scale-98 cursor-pointer'
-            }`}
-          >
-            <CheckCircle2 size={20} />
-            <span>{submitting ? 'Generating Bill...' : 'Complete & Generate Receipt'}</span>
-          </button>
+          {bill.payment_method === 'cash' && bill.cash_given && (
+            <>
+              <div className="flex justify-between text-stone-600">
+                <span className="text-stone-400">Cash Received:</span>
+                <span>{formatCurrency(bill.cash_given)}</span>
+              </div>
+              <div className="flex justify-between text-emerald-700 font-bold">
+                <span>Change Returned:</span>
+                <span>{formatCurrency(bill.change_returned || 0)}</span>
+              </div>
+            </>
+          )}
+
+          <div className="flex justify-between items-center pt-2">
+            <span className="text-stone-400">Customer Feedback:</span>
+            {feedback === 'good' ? (
+              <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
+                <ThumbsUp size={12} /> Positive
+              </span>
+            ) : feedback === 'bad' ? (
+              <span className="inline-flex items-center gap-1 text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-full">
+                <ThumbsDown size={12} /> Constructive
+              </span>
+            ) : (
+              <span className="text-stone-400">Recorded</span>
+            )}
+          </div>
         </div>
 
       </div>
+
+      {/* 5. Start New Checkout Button */}
+      <div className="pt-2 no-print">
+        <button
+          type="button"
+          onClick={onReset}
+          className="w-full flex items-center justify-center gap-2 py-3.5 px-5 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-sm transition-all active:scale-98 cursor-pointer"
+        >
+          <ShoppingBag size={18} />
+          <span>Start New Checkout</span>
+        </button>
+      </div>
+
     </div>
   );
 }
