@@ -15,13 +15,24 @@ import {
   AlertTriangle,
   Lock,
   X,
-  ShieldCheck
+  ShieldCheck,
+  Calendar,
+  TrendingUp,
+  RotateCcw
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatPhone } from '../../utils/formatters';
 import { FeedbackBadge } from '../common/Badge';
 import { ReceiptModal } from '../common/ReceiptModal';
 import { exportHelper } from '../../utils/exportHelper';
 import { useAuth } from '../../context/AuthContext';
+
+// Helper to format Date object into local YYYY-MM-DD
+function getLocalDateString(d = new Date()) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 // ── Delete Bill Confirmation Modal ────────────────────────────────────────────
 function DeleteBillModal({ bill, onConfirm, onClose }) {
@@ -155,8 +166,57 @@ export function RecentBillsTable({ bills = [], storeSettings, onDeleteBill }) {
   const [search, setSearch] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [feedbackFilter, setFeedbackFilter] = useState('all');
+  const [datePreset, setDatePreset] = useState('all'); // 'all', 'today', 'yesterday', 'last7', 'thisMonth', 'custom'
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [selectedBill, setSelectedBill] = useState(null);
   const [billToDelete, setBillToDelete] = useState(null);
+
+  const handleDatePresetChange = (preset) => {
+    setDatePreset(preset);
+    const now = new Date();
+    
+    if (preset === 'all') {
+      setStartDate('');
+      setEndDate('');
+    } else if (preset === 'today') {
+      const todayStr = getLocalDateString(now);
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else if (preset === 'yesterday') {
+      const y = new Date();
+      y.setDate(y.getDate() - 1);
+      const yStr = getLocalDateString(y);
+      setStartDate(yStr);
+      setEndDate(yStr);
+    } else if (preset === 'last7') {
+      const past = new Date();
+      past.setDate(past.getDate() - 6);
+      setStartDate(getLocalDateString(past));
+      setEndDate(getLocalDateString(now));
+    } else if (preset === 'thisMonth') {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      setStartDate(getLocalDateString(startOfMonth));
+      setEndDate(getLocalDateString(now));
+    } else if (preset === 'custom') {
+      if (!startDate) setStartDate(getLocalDateString(now));
+    }
+  };
+
+  const handleCustomDateChange = (type, val) => {
+    setDatePreset('custom');
+    if (type === 'start') {
+      setStartDate(val);
+    } else {
+      setEndDate(val);
+    }
+  };
+
+  const handleClearDateFilter = () => {
+    setDatePreset('all');
+    setStartDate('');
+    setEndDate('');
+  };
 
   const filteredBills = bills.filter(bill => {
     const term = search.toLowerCase();
@@ -168,8 +228,47 @@ export function RecentBillsTable({ bills = [], storeSettings, onDeleteBill }) {
     const matchesPayment = paymentFilter === 'all' || bill.payment_method === paymentFilter;
     const matchesFeedback = feedbackFilter === 'all' || bill.feedback === feedbackFilter;
 
-    return matchesSearch && matchesPayment && matchesFeedback;
+    // Date filtering
+    let matchesDate = true;
+    if (startDate || endDate) {
+      if (!bill.created_at) {
+        matchesDate = false;
+      } else {
+        const bDate = new Date(bill.created_at);
+        if (isNaN(bDate.getTime())) {
+          matchesDate = false;
+        } else {
+          if (startDate) {
+            const [sy, sm, sd] = startDate.split('-').map(Number);
+            const startLimit = new Date(sy, sm - 1, sd, 0, 0, 0, 0);
+            if (bDate < startLimit) matchesDate = false;
+          }
+          if (endDate) {
+            const [ey, em, ed] = endDate.split('-').map(Number);
+            const endLimit = new Date(ey, em - 1, ed, 23, 59, 59, 999);
+            if (bDate > endLimit) matchesDate = false;
+          } else if (startDate && !endDate) {
+            const [sy, sm, sd] = startDate.split('-').map(Number);
+            const endLimit = new Date(sy, sm - 1, sd, 23, 59, 59, 999);
+            if (bDate > endLimit) matchesDate = false;
+          }
+        }
+      }
+    }
+
+    return matchesSearch && matchesPayment && matchesFeedback && matchesDate;
   });
+
+  // Sales calculations for the filtered set
+  const totalSales = filteredBills.reduce((acc, b) => acc + (Number(b.total_amount) || 0), 0);
+  const totalDiscounts = filteredBills.reduce((acc, b) => acc + (Number(b.discount_amount) || 0), 0);
+  const cashSales = filteredBills
+    .filter(b => b.payment_method === 'cash')
+    .reduce((acc, b) => acc + (Number(b.total_amount) || 0), 0);
+  const upiSales = filteredBills
+    .filter(b => b.payment_method === 'upi')
+    .reduce((acc, b) => acc + (Number(b.total_amount) || 0), 0);
+  const avgBill = filteredBills.length > 0 ? Math.round(totalSales / filteredBills.length) : 0;
 
   return (
     <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-xs">
@@ -181,7 +280,7 @@ export function RecentBillsTable({ bills = [], storeSettings, onDeleteBill }) {
             <Receipt size={20} className="text-amber-600" />
             <span>Recent Bills &amp; Transactions</span>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600">
-              {bills.length} total
+              {filteredBills.length}{filteredBills.length !== bills.length ? ` of ${bills.length}` : ''} total
             </span>
           </h3>
           <p className="text-xs text-stone-500">
@@ -192,23 +291,159 @@ export function RecentBillsTable({ bills = [], storeSettings, onDeleteBill }) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => exportHelper.exportDiscounts(bills, 'csv')}
+            onClick={() => exportHelper.exportDiscounts(filteredBills, 'csv')}
             className="flex items-center gap-1.5 px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold rounded-2xl border border-stone-300 transition-colors cursor-pointer"
             title="Export feedback discounts report"
           >
             <Tag size={13} className="text-amber-600" />
-            <span>Export Discounts</span>
+            <span>Export Discounts ({filteredBills.length})</span>
           </button>
 
           <button
             type="button"
-            onClick={() => exportHelper.exportSales(bills, 'csv')}
+            onClick={() => exportHelper.exportSales(filteredBills, 'csv')}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-2xl shadow-xs transition-colors cursor-pointer"
-            title="Export all sales bills to CSV"
+            title="Export filtered sales bills to CSV"
           >
             <Download size={13} />
-            <span>Export Sales CSV</span>
+            <span>Export Sales CSV ({filteredBills.length})</span>
           </button>
+        </div>
+      </div>
+
+      {/* Dynamic Sales & Performance Summary for Selected Period */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-3 p-3.5 my-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-50/50 to-stone-50 border border-amber-200/70 shadow-2xs">
+        {/* Total Sales */}
+        <div className="bg-white/90 backdrop-blur-xs p-3 rounded-xl border border-amber-100 shadow-2xs">
+          <div className="flex items-center justify-between text-stone-500 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900">Total Sales</span>
+            <TrendingUp size={14} className="text-amber-600" />
+          </div>
+          <div className="text-base sm:text-lg font-black text-amber-700">
+            {formatCurrency(totalSales)}
+          </div>
+          <p className="text-[10px] text-stone-400 mt-0.5 font-medium">
+            {filteredBills.length} {filteredBills.length === 1 ? 'bill' : 'bills'} in period
+          </p>
+        </div>
+
+        {/* Cash Sales */}
+        <div className="bg-white/90 backdrop-blur-xs p-3 rounded-xl border border-emerald-100 shadow-2xs">
+          <div className="flex items-center justify-between text-stone-500 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900">Cash Sales</span>
+            <Banknote size={14} className="text-emerald-600" />
+          </div>
+          <div className="text-base sm:text-lg font-black text-emerald-700">
+            {formatCurrency(cashSales)}
+          </div>
+          <p className="text-[10px] text-stone-400 mt-0.5 font-medium">
+            {filteredBills.filter(b => b.payment_method === 'cash').length} cash bills
+          </p>
+        </div>
+
+        {/* UPI Sales */}
+        <div className="bg-white/90 backdrop-blur-xs p-3 rounded-xl border border-stone-200/80 shadow-2xs">
+          <div className="flex items-center justify-between text-stone-500 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-900">UPI / QR Sales</span>
+            <QrCode size={14} className="text-amber-600" />
+          </div>
+          <div className="text-base sm:text-lg font-black text-stone-900">
+            {formatCurrency(upiSales)}
+          </div>
+          <p className="text-[10px] text-stone-400 mt-0.5 font-medium">
+            {filteredBills.filter(b => b.payment_method === 'upi').length} UPI bills
+          </p>
+        </div>
+
+        {/* Avg Ticket */}
+        <div className="bg-white/90 backdrop-blur-xs p-3 rounded-xl border border-stone-200/80 shadow-2xs">
+          <div className="flex items-center justify-between text-stone-500 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-600">Avg Ticket</span>
+            <Receipt size={14} className="text-stone-500" />
+          </div>
+          <div className="text-base sm:text-lg font-black text-stone-800">
+            {formatCurrency(avgBill)}
+          </div>
+          <p className="text-[10px] text-stone-400 mt-0.5 font-medium">per transaction</p>
+        </div>
+
+        {/* Total Discounts */}
+        <div className="col-span-2 sm:col-span-2 md:col-span-1 bg-white/90 backdrop-blur-xs p-3 rounded-xl border border-stone-200/80 shadow-2xs">
+          <div className="flex items-center justify-between text-stone-500 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-600">Discounts</span>
+            <Tag size={14} className="text-stone-500" />
+          </div>
+          <div className="text-base sm:text-lg font-black text-stone-700">
+            {formatCurrency(totalDiscounts)}
+          </div>
+          <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">rewards &amp; offers</p>
+        </div>
+      </div>
+
+      {/* Date Range Toolbar */}
+      <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between p-3.5 mb-3 bg-stone-50/80 rounded-2xl border border-stone-200">
+        {/* Presets */}
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="text-stone-600 font-bold mr-1 flex items-center gap-1">
+            <Calendar size={13} className="text-amber-600" />
+            <span>Date Filter:</span>
+          </span>
+          {[
+            { id: 'all', label: 'All Time' },
+            { id: 'today', label: 'Today' },
+            { id: 'yesterday', label: 'Yesterday' },
+            { id: 'last7', label: 'Last 7 Days' },
+            { id: 'thisMonth', label: 'This Month' },
+            { id: 'custom', label: 'Custom' }
+          ].map(p => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => handleDatePresetChange(p.id)}
+              className={`px-3 py-1 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                datePreset === p.id 
+                  ? 'bg-amber-600 text-white shadow-xs' 
+                  : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-100 hover:text-stone-900'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Date Inputs */}
+        <div className="flex flex-wrap items-center gap-2 text-xs w-full lg:w-auto">
+          <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-stone-200 shadow-2xs">
+            <span className="text-stone-400 font-semibold text-[11px]">From:</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => handleCustomDateChange('start', e.target.value)}
+              className="bg-transparent text-xs text-stone-800 font-medium focus:outline-none cursor-pointer"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-stone-200 shadow-2xs">
+            <span className="text-stone-400 font-semibold text-[11px]">To:</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => handleCustomDateChange('end', e.target.value)}
+              className="bg-transparent text-xs text-stone-800 font-medium focus:outline-none cursor-pointer"
+            />
+          </div>
+
+          {(startDate || endDate || datePreset !== 'all') && (
+            <button
+              type="button"
+              onClick={handleClearDateFilter}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-700 rounded-xl font-semibold text-xs transition-colors cursor-pointer"
+              title="Reset date filter to All Time"
+            >
+              <RotateCcw size={12} />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
       </div>
 
