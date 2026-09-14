@@ -25,6 +25,15 @@ jobs:
       - name: Build App
         run: npm run build
 
+      - name: Deploy Firestore Rules
+        run: npx -y firebase-tools@latest deploy --only firestore:rules --project shivam-roy-oils-pos
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_CI_TOKEN }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        # If FIREBASE_CI_TOKEN secret is set, firebase-tools uses it automatically.
+        # To generate the token, run: npx firebase-tools@latest login:ci
+        # Then add the output as a GitHub secret named FIREBASE_CI_TOKEN
+
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:

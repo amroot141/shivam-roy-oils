@@ -3,6 +3,7 @@ import { LocalStorageDB, STORAGE_KEYS, SEED_SETTINGS } from '../services/db';
 import { inventoryService } from '../services/inventoryService';
 import { billService } from '../services/billService';
 import { settingsService } from '../services/settingsService';
+import { db, collection, query, onSnapshot } from '../services/firebase';
 
 const StoreContext = createContext(null);
 
@@ -51,6 +52,46 @@ export function StoreProvider({ children }) {
   useEffect(() => {
     // Non-blocking background sync on initial mount
     loadData(false);
+
+    // Realtime bidirectional sync for Inventory
+    const unsubInv = onSnapshot(collection(db, 'inventory'), (snap) => {
+      if (snap && !snap.empty) {
+        const remoteItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const localItems = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
+        const remoteMap = new Map(remoteItems.map(i => [i.id, i]));
+        
+        // Combine remote items with any unsynced local items
+        const merged = [...remoteItems];
+        for (const localItem of localItems) {
+          if (!remoteMap.has(localItem.id)) {
+            merged.push(localItem);
+            inventoryService.addProduct(localItem).catch(() => {});
+          }
+        }
+
+        setInventory(merged);
+        LocalStorageDB.set(STORAGE_KEYS.INVENTORY, merged);
+      }
+    }, (err) => {
+      console.warn('Firestore realtime inventory sync error:', err.message);
+    });
+
+    // Realtime bidirectional sync for Bills
+    const unsubBills = onSnapshot(query(collection(db, 'bills')), (snap) => {
+      if (snap && !snap.empty) {
+        const remoteBills = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        remoteBills.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setBills(remoteBills);
+        LocalStorageDB.set(STORAGE_KEYS.BILLS, remoteBills);
+      }
+    }, (err) => {
+      console.warn('Firestore realtime bills sync error:', err.message);
+    });
+
+    return () => {
+      unsubInv();
+      unsubBills();
+    };
   }, [loadData]);
 
   // Actions with Instant Optimistic UI Updates (0ms response time)
