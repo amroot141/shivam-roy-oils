@@ -14,42 +14,57 @@ export const inventoryService = {
   async getInventory(onBackgroundSync = null) {
     LocalStorageDB.init();
     let local = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, []);
-    if (!Array.isArray(local) || local.length === 0) {
-      local = SEED_INVENTORY;
-      LocalStorageDB.set(STORAGE_KEYS.INVENTORY, local);
-    }
 
-    // Background Firestore sync promise
+    // Background Firestore sync promise with smart bidirectional local-remote merge
     const firestorePromise = getDocs(collection(db, 'inventory')).then(snap => {
-      if (snap && !snap.empty) {
-        const remoteItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        LocalStorageDB.set(STORAGE_KEYS.INVENTORY, remoteItems);
-        if (typeof onBackgroundSync === 'function') {
-          onBackgroundSync(remoteItems);
+      const remoteItems = (snap && !snap.empty)
+        ? snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        : [];
+
+      const remoteMap = new Map(remoteItems.map(item => [item.id, item]));
+      const mergedList = [...remoteItems];
+
+      // Merge any local-only items (e.g. products added on desktop) and auto-upload to Firestore
+      if (Array.isArray(local) && local.length > 0) {
+        for (const localItem of local) {
+          if (!remoteMap.has(localItem.id)) {
+            mergedList.push(localItem);
+            // Push local-only item to Firestore so all devices (phones, tablets, PCs) receive it!
+            setDoc(doc(db, 'inventory', localItem.id), localItem).catch(err => 
+              console.warn('Auto-upload local item queued:', err.message)
+            );
+          }
         }
-        return remoteItems;
-      } else if (snap && snap.empty) {
-        // If Firestore is empty, seed Firestore in background with local/seed items
-        const itemsToSeed = local.length > 0 ? local : SEED_INVENTORY;
-        itemsToSeed.forEach(item => {
+      }
+
+      // If both remote and local are empty, fallback to SEED_INVENTORY
+      if (mergedList.length === 0) {
+        mergedList.push(...SEED_INVENTORY);
+        SEED_INVENTORY.forEach(item => {
           setDoc(doc(db, 'inventory', item.id), item).catch(err => 
             console.warn('Firestore seed push queued:', err.message)
           );
         });
       }
-      return local;
+
+      LocalStorageDB.set(STORAGE_KEYS.INVENTORY, mergedList);
+
+      if (typeof onBackgroundSync === 'function') {
+        onBackgroundSync(mergedList);
+      }
+      return mergedList;
     }).catch(err => {
       console.warn('Firestore fetch note:', err.message);
-      return local;
+      return Array.isArray(local) && local.length > 0 ? local : SEED_INVENTORY;
     });
 
     // Try fast fetch within 1200ms
-    const remote = await withTimeout(firestorePromise, 1200, null);
-    if (remote && Array.isArray(remote) && remote.length > 0) {
-      return remote;
+    const result = await withTimeout(firestorePromise, 1200, null);
+    if (result && Array.isArray(result) && result.length > 0) {
+      return result;
     }
 
-    return local;
+    return Array.isArray(local) && local.length > 0 ? local : SEED_INVENTORY;
   },
 
   /**

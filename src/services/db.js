@@ -177,8 +177,8 @@ export class LocalStorageDB {
     }
 
     const existingInventory = LocalStorageDB.get(STORAGE_KEYS.INVENTORY, null);
-    if (!existingInventory || !Array.isArray(existingInventory) || existingInventory.length === 0) {
-      LocalStorageDB.set(STORAGE_KEYS.INVENTORY, SEED_INVENTORY);
+    if (existingInventory === null) {
+      LocalStorageDB.set(STORAGE_KEYS.INVENTORY, []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.BILLS)) {
       LocalStorageDB.set(STORAGE_KEYS.BILLS, SEED_BILLS);
