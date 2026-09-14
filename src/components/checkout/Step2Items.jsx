@@ -11,7 +11,7 @@ import {
   AlertCircle,
   Edit3
 } from 'lucide-react';
-import { UnitBadge, StockBadge } from '../common/Badge';
+import { UnitBadge } from '../common/Badge';
 import { DecimalQtyModal } from '../common/DecimalQtyModal';
 import { formatCurrency } from '../../utils/formatters';
 import { cartSubtotal, cartNumItems } from '../../utils/cart';
@@ -156,10 +156,9 @@ export function Step2Items({
                 }`}
               >
                 <div>
-                  {/* Top Badges */}
-                  <div className="flex items-center justify-between gap-2 mb-2">
+                  {/* Top Badges — stock count hidden from customers */}
+                  <div className="flex items-center gap-2 mb-2">
                     <UnitBadge unit={product.unit} />
-                    <StockBadge quantity={product.stock_quantity} />
                   </div>
 
                   {/* Product Title */}

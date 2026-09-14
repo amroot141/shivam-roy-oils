@@ -3,7 +3,7 @@ import { LocalStorageDB, STORAGE_KEYS, SEED_SETTINGS } from '../services/db';
 import { inventoryService } from '../services/inventoryService';
 import { billService } from '../services/billService';
 import { settingsService } from '../services/settingsService';
-import { db, collection, query, onSnapshot } from '../services/firebase';
+import { db, collection, doc, query, onSnapshot } from '../services/firebase';
 
 const StoreContext = createContext(null);
 
@@ -88,9 +88,21 @@ export function StoreProvider({ children }) {
       console.warn('Firestore realtime bills sync error:', err.message);
     });
 
+    // Realtime sync for Settings (UPI, QR, store name, etc.)
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'store_config'), (snap) => {
+      if (snap && snap.exists()) {
+        const data = snap.data();
+        setSettings(data);
+        LocalStorageDB.set(STORAGE_KEYS.SETTINGS, data);
+      }
+    }, (err) => {
+      console.warn('Firestore realtime settings sync error:', err.message);
+    });
+
     return () => {
       unsubInv();
       unsubBills();
+      unsubSettings();
     };
   }, [loadData]);
 

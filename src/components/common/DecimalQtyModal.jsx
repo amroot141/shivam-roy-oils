@@ -1,20 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from './Modal';
-import { Check, Edit3 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 
+/**
+ * Modal for entering an exact (possibly decimal) quantity for a product.
+ * Uses a text input with inputMode="decimal" so users can fully clear and retype.
+ */
 export function DecimalQtyModal({ isOpen, onClose, product, currentQty = 1, onSaveQty }) {
-  const [quantity, setQuantity] = useState(String(currentQty));
+  // Store as raw string — allows full clear + retype without type="number" restrictions
+  const [rawInput, setRawInput] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      setQuantity(String(currentQty));
+      setRawInput(currentQty > 0 ? String(currentQty) : '');
     }
   }, [isOpen, currentQty]);
 
   if (!product) return null;
 
-  const numQty = Math.max(0, parseFloat(quantity) || 0);
+  // Parse only for calculations — never block typing
+  const numQty = Math.max(0, parseFloat(rawInput) || 0);
   const maxStock = Number(product.stock_quantity) || 9999;
   const lineTotal = Math.round((Number(product.unit_price) || 0) * numQty * 100) / 100;
 
@@ -54,11 +60,17 @@ export function DecimalQtyModal({ isOpen, onClose, product, currentQty = 1, onSa
             Enter Exact Quantity ({product.unit})
           </label>
           <input
-            type="number"
-            step="any"
-            min="0"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
+            type="text"
+            inputMode="decimal"
+            value={rawInput}
+            onChange={(e) => {
+              const v = e.target.value;
+              // Allow: empty string, digits, one decimal point
+              if (v === '' || /^\d*\.?\d*$/.test(v)) {
+                setRawInput(v);
+              }
+            }}
+            onFocus={(e) => e.target.select()}
             placeholder="e.g. 5.62"
             autoFocus
             className="w-full px-3 py-2 bg-white border border-stone-300 rounded-xl text-base font-extrabold text-stone-900 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20"
@@ -71,9 +83,9 @@ export function DecimalQtyModal({ isOpen, onClose, product, currentQty = 1, onSa
               <button
                 key={val}
                 type="button"
-                onClick={() => setQuantity(val)}
+                onClick={() => setRawInput(val)}
                 className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
-                  quantity === val
+                  rawInput === val
                     ? 'bg-amber-600 text-white border-amber-600'
                     : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'
                 }`}
