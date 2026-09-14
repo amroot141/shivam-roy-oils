@@ -85,27 +85,32 @@ export function CheckoutReceipt({ bill, storeSettings, onReset }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {(bill.items || []).map((item, idx) => (
-                <tr key={idx}>
-                  <td className="py-2 text-stone-900 font-medium max-w-[150px]">
-                    {item.product_name}
-                    {bill.feedback !== 'none' && Number(item.discount_percent) > 0 && (
-                      <span className="block text-[10px] text-emerald-600 font-semibold">
-                        ({item.discount_percent}% off applied)
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-2 text-center text-stone-600">
-                    {item.quantity} {item.unit}
-                  </td>
-                  <td className="py-2 text-right text-stone-600">
-                    ₹{item.unit_price}
-                  </td>
-                  <td className="py-2 text-right font-bold text-stone-900">
-                    ₹{item.line_total}
-                  </td>
-                </tr>
-              ))}
+              {(bill.items || []).map((item, idx) => {
+                const hasFlatDisc = item.discount_type === 'flat' && Number(item.discount_flat) > 0;
+                const hasPercentDisc = item.discount_type !== 'flat' && Number(item.discount_percent) > 0;
+
+                return (
+                  <tr key={idx}>
+                    <td className="py-2 text-stone-900 font-medium max-w-[150px]">
+                      {item.product_name}
+                      {bill.feedback !== 'none' && (hasFlatDisc || hasPercentDisc) && (
+                        <span className="block text-[10px] text-emerald-600 font-semibold">
+                          ({hasFlatDisc ? `₹${item.discount_flat} off` : `${item.discount_percent}% off`} applied)
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 text-center text-stone-600">
+                      {item.quantity} {item.unit}
+                    </td>
+                    <td className="py-2 text-right text-stone-600">
+                      ₹{item.unit_price}
+                    </td>
+                    <td className="py-2 text-right font-bold text-stone-900">
+                      ₹{item.line_total}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

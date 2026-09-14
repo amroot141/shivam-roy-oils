@@ -1,9 +1,17 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { QrCode, Printer, ExternalLink, Sparkles } from 'lucide-react';
+import { QrCode, Printer, ExternalLink, Sparkles, Download, Check } from 'lucide-react';
 
 export function StoreQRWidget({ storeSettings }) {
   const checkoutUrl = `${window.location.origin}/checkout`;
+  const [downloading, setDownloading] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
+
+  const storeName = storeSettings?.store_name || 'Shivam Roy Oils';
+  const storeTagline = storeSettings?.tagline || 'Farm-Fresh Cold Pressed Oils & Spices';
+  const storeAddress = storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
+  const storePhone = storeSettings?.phone || '+91 98765 01234';
+  const storeInitial = storeName.charAt(0).toUpperCase() || 'S';
 
   const handlePrintQR = () => {
     const printWindow = window.open('', '_blank');
@@ -12,8 +20,7 @@ export function StoreQRWidget({ storeSettings }) {
       return;
     }
 
-    const storeName = storeSettings?.store_name || 'Shivam Roy Oils';
-    const storeAddress = storeSettings?.address || 'Shop 14, Kisan Mandi Complex';
+    const qrElement = document.getElementById('checkout-svg-qr')?.innerHTML || '';
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -21,11 +28,12 @@ export function StoreQRWidget({ storeSettings }) {
         <head>
           <title>Store Self-Checkout QR Poster - ${storeName}</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@600;800&family=Inter:wght@400;600&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@600;800;900&family=Inter:wght@400;500;600;700&display=swap');
+            * { box-sizing: border-box; }
             body {
               font-family: 'Inter', sans-serif;
               margin: 0;
-              padding: 40px;
+              padding: 40px 20px;
               display: flex;
               justify-content: center;
               align-items: center;
@@ -36,82 +44,135 @@ export function StoreQRWidget({ storeSettings }) {
               width: 100%;
               max-width: 480px;
               background: white;
-              border: 8px solid #d97706;
-              border-radius: 32px;
-              padding: 40px 30px;
+              border: 10px solid #d97706;
+              border-radius: 36px;
+              padding: 44px 32px;
               text-align: center;
-              box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+              box-shadow: 0 25px 35px -5px rgba(0, 0, 0, 0.12);
             }
             .brand-badge {
-              display: inline-block;
-              background: #d97706;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              background: linear-gradient(135deg, #f59e0b, #d97706);
               color: white;
               font-family: 'Outfit', sans-serif;
-              font-weight: 800;
-              font-size: 28px;
-              width: 54px;
-              height: 54px;
-              line-height: 54px;
-              border-radius: 18px;
-              margin-bottom: 12px;
+              font-weight: 900;
+              font-size: 32px;
+              width: 60px;
+              height: 60px;
+              border-radius: 20px;
+              margin-bottom: 14px;
+              box-shadow: 0 10px 15px -3px rgba(217, 119, 6, 0.3);
             }
             h1 {
               font-family: 'Outfit', sans-serif;
-              font-size: 24px;
+              font-size: 26px;
               font-weight: 800;
               color: #1c1917;
               margin: 0 0 6px 0;
             }
+            .tagline {
+              font-size: 14px;
+              color: #d97706;
+              font-weight: 700;
+              margin: 0 0 8px 0;
+              letter-spacing: 0.5px;
+            }
             .address {
-              font-size: 13px;
+              font-size: 12px;
               color: #78716c;
               margin-bottom: 24px;
+              line-height: 1.4;
             }
             .qr-box {
-              display: inline-block;
-              padding: 20px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              padding: 24px;
               background: #fffbeb;
-              border: 2px dashed #f59e0b;
-              border-radius: 24px;
+              border: 3px dashed #f59e0b;
+              border-radius: 28px;
               margin-bottom: 24px;
             }
-            .tagline {
+            .qr-box svg {
+              width: 220px;
+              height: 220px;
+            }
+            .action-banner {
+              background: #1c1917;
+              color: #fef3c7;
+              font-family: 'Outfit', sans-serif;
               font-size: 18px;
-              font-weight: 700;
-              color: #b45309;
-              margin-bottom: 8px;
+              font-weight: 800;
+              padding: 10px 18px;
+              border-radius: 16px;
+              display: inline-block;
+              margin-bottom: 12px;
+              letter-spacing: 0.5px;
             }
             .instructions {
               font-size: 13px;
               color: #57534e;
-              line-height: 1.5;
+              line-height: 1.6;
+              max-width: 360px;
+              margin: 0 auto;
             }
-            .url {
-              margin-top: 20px;
-              font-family: monospace;
-              font-size: 12px;
+            .instructions strong {
+              color: #b45309;
+            }
+            .footer-info {
+              margin-top: 24px;
+              padding-top: 16px;
+              border-top: 1px dashed #e7e5e4;
+              font-size: 11px;
               color: #a8a29e;
+            }
+            .footer-info .phone {
+              font-weight: 600;
+              color: #44403c;
+              margin-bottom: 4px;
+            }
+            .footer-info .url {
+              font-family: monospace;
+              word-break: break-all;
+            }
+            @media print {
+              body {
+                background: white;
+                padding: 0;
+              }
+              .poster {
+                box-shadow: none;
+                border-width: 6px;
+              }
             }
           </style>
         </head>
         <body>
           <div class="poster">
-            <div class="brand-badge">S</div>
+            <div class="brand-badge">${storeInitial}</div>
             <h1>${storeName}</h1>
+            <p class="tagline">${storeTagline}</p>
             <p class="address">${storeAddress}</p>
             
             <div class="qr-box">
-              <svg width="220" height="220" viewBox="0 0 220 220">
-                ${document.getElementById('checkout-svg-qr')?.innerHTML || ''}
-              </svg>
+              ${qrElement}
             </div>
 
-            <p class="tagline">SCAN FOR SELF-CHECKOUT</p>
+            <div>
+              <div class="action-banner">⚡ SCAN TO SELF-CHECKOUT</div>
+            </div>
+            
             <p class="instructions">
-              Skip the counter line! Scan this code on your phone, choose your items, 
-              leave quick feedback, and <strong>unlock instant store discounts!</strong>
+              Skip the cashier queue! Scan this QR code with your phone camera, pick your items, 
+              give instant feedback &amp; <strong>unlock special store discounts!</strong>
             </p>
-            <p class="url">${checkoutUrl}</p>
+
+            <div class="footer-info">
+              <div class="phone">Store Helpdesk: ${storePhone}</div>
+              <div class="url">${checkoutUrl}</div>
+            </div>
           </div>
           <script>
             window.onload = function() {
@@ -122,6 +183,126 @@ export function StoreQRWidget({ storeSettings }) {
       </html>
     `);
     printWindow.document.close();
+  };
+
+  const handleDownloadPoster = async () => {
+    try {
+      setDownloading(true);
+      const canvas = document.createElement('canvas');
+      const width = 800;
+      const height = 1100;
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+
+      // Background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      // Outer Border
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 16;
+      ctx.strokeRect(20, 20, width - 40, height - 40);
+
+      // Inner Accent
+      ctx.strokeStyle = '#fde68a';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(36, 36, width - 72, height - 72);
+
+      // Header Badge Circle
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.arc(width / 2, 120, 42, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 44px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(storeInitial, width / 2, 122);
+
+      // Store Name
+      ctx.fillStyle = '#1c1917';
+      ctx.font = 'bold 36px sans-serif';
+      ctx.fillText(storeName, width / 2, 200);
+
+      // Store Tagline
+      ctx.fillStyle = '#b45309';
+      ctx.font = '600 20px sans-serif';
+      ctx.fillText(storeTagline, width / 2, 240);
+
+      // Address
+      ctx.fillStyle = '#78716c';
+      ctx.font = '16px sans-serif';
+      ctx.fillText(storeAddress, width / 2, 275);
+
+      // QR Code Box
+      const qrBoxSize = 340;
+      const qrBoxX = (width - qrBoxSize) / 2;
+      const qrBoxY = 320;
+      
+      ctx.fillStyle = '#fffbeb';
+      ctx.fillRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize);
+
+      // Get SVG QR element
+      const svgEl = document.querySelector('#checkout-svg-qr svg');
+      if (svgEl) {
+        const svgString = new XMLSerializer().serializeToString(svgEl);
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const URL = window.URL || window.webkitURL || window;
+        const blobURL = URL.createObjectURL(svgBlob);
+        
+        const img = new Image();
+        await new Promise((resolve) => {
+          img.onload = () => {
+            ctx.drawImage(img, qrBoxX + 25, qrBoxY + 25, qrBoxSize - 50, qrBoxSize - 50);
+            URL.revokeObjectURL(blobURL);
+            resolve();
+          };
+          img.src = blobURL;
+        });
+      }
+
+      // Action Banner Box
+      ctx.fillStyle = '#1c1917';
+      ctx.beginPath();
+      ctx.roundRect((width - 460) / 2, 700, 460, 56, 16);
+      ctx.fill();
+
+      ctx.fillStyle = '#fef3c7';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText('⚡ SCAN TO SELF-CHECKOUT', width / 2, 735);
+
+      // Instructions
+      ctx.fillStyle = '#44403c';
+      ctx.font = '500 18px sans-serif';
+      ctx.fillText('Skip the counter queue! Scan with your smartphone camera,', width / 2, 800);
+      ctx.fillText('pick your items & unlock exclusive discounts!', width / 2, 830);
+
+      // Footer
+      ctx.fillStyle = '#a8a29e';
+      ctx.font = '15px sans-serif';
+      ctx.fillText(`Store Assistance: ${storePhone}`, width / 2, 920);
+      ctx.font = '13px monospace';
+      ctx.fillText(checkoutUrl, width / 2, 950);
+
+      // Download
+      const link = document.createElement('a');
+      link.download = `${storeName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-checkout-poster.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      setDownloaded(true);
+      setTimeout(() => setDownloaded(false), 3000);
+    } catch (err) {
+      console.error('Error creating poster image:', err);
+      alert('Could not generate poster image download. Please use the Print option.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -156,11 +337,14 @@ export function StoreQRWidget({ storeSettings }) {
             <Sparkles size={13} className="text-amber-600" />
             <span>Scan to Checkout &amp; Unlock Discounts</span>
           </p>
+          <p className="text-[11px] text-stone-500 font-medium mt-0.5 max-w-xs truncate">
+            {storeName} • {storePhone}
+          </p>
           <a
             href={checkoutUrl}
             target="_blank"
             rel="noreferrer"
-            className="text-[11px] text-stone-400 hover:text-amber-700 flex items-center gap-1 mt-1 truncate max-w-xs"
+            className="text-[11px] text-stone-400 hover:text-amber-700 flex items-center gap-1 mt-1 truncate max-w-xs transition-colors"
           >
             <span>{checkoutUrl}</span>
             <ExternalLink size={11} />
@@ -168,14 +352,34 @@ export function StoreQRWidget({ storeSettings }) {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={handlePrintQR}
-        className="w-full flex items-center justify-center gap-2 py-3 bg-stone-900 hover:bg-stone-800 text-white rounded-2xl text-xs font-bold shadow-md transition-all active:scale-98 cursor-pointer mt-2"
-      >
-        <Printer size={15} />
-        <span>Print Store QR Poster</span>
-      </button>
+      <div className="grid grid-cols-2 gap-2 mt-2">
+        <button
+          type="button"
+          onClick={handlePrintQR}
+          className="flex items-center justify-center gap-1.5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-2xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+        >
+          <Printer size={14} />
+          <span>Print Poster</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleDownloadPoster}
+          disabled={downloading}
+          className="flex items-center justify-center gap-1.5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-amber-600/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+        >
+          {downloaded ? (
+            <>
+              <Check size={14} className="text-emerald-300" />
+              <span>Downloaded!</span>
+            </>
+          ) : (
+            <>
+              <Download size={14} />
+              <span>{downloading ? 'Preparing...' : 'Download PNG'}</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

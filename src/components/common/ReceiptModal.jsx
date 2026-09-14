@@ -10,30 +10,45 @@ export function ReceiptModal({ isOpen, onClose, bill, storeSettings }) {
     window.print();
   };
 
-  const storeName = storeSettings?.store_name || 'Shivam Roy Oils';
-  const storePhone = storeSettings?.phone || '+91 98765 01234';
-  const storeAddress = storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
+  const storeName = storeSettings?.receipt_store_name || storeSettings?.store_name || 'Shivam Roy Oils';
+  const storeTagline = storeSettings?.receipt_tagline || storeSettings?.tagline || 'Farm-Fresh Cold Pressed Oils & Spices';
+  const storePhone = storeSettings?.receipt_phone || storeSettings?.phone || '+91 98765 01234';
+  const storeAddress = storeSettings?.receipt_address || storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
+  const storeGSTIN = storeSettings?.receipt_gstin || '';
+  const headerNote = storeSettings?.receipt_header_note || 'Tax Invoice / Retail Bill';
+  const footerNote = storeSettings?.receipt_footer_note || 'Thank you for supporting pure & organic produce! Visit again.';
+  const showCustomerInfo = storeSettings?.receipt_show_customer_info !== false;
+  const showDiscounts = storeSettings?.receipt_show_discounts !== false;
+  const showPaymentMode = storeSettings?.receipt_show_payment_mode !== false;
+  const paperWidthClass = storeSettings?.receipt_paper_width === '58mm' ? 'max-w-[300px]' : 'max-w-md';
+
+  const storeInitial = storeName.charAt(0).toUpperCase() || 'S';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Receipt #${bill.id}`} maxWidth="max-w-md">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Receipt #${bill.id}`} maxWidth={paperWidthClass}>
       <div className="flex flex-col items-center">
         
         {/* Printable Bill Area */}
-        <div id="printable-receipt" className="w-full bg-stone-50/70 border border-dashed border-stone-300 rounded-2xl p-5 text-stone-800 text-sm font-mono">
+        <div id="printable-receipt" className={`w-full bg-stone-50/70 border border-dashed border-stone-300 rounded-2xl p-5 text-stone-800 text-sm font-mono ${paperWidthClass}`}>
           {/* Store Brand Header */}
-          <div className="text-center pb-4 border-b border-dashed border-stone-300">
-            <div className="inline-flex items-center justify-center w-9 h-9 bg-amber-600 text-white rounded-xl mb-1.5 font-sans font-bold shadow-xs">
-              S
+          <div className="text-center pb-3 border-b border-dashed border-stone-300">
+            <div className="inline-flex items-center justify-center w-9 h-9 bg-amber-600 text-white rounded-xl mb-1 font-sans font-bold shadow-xs">
+              {storeInitial}
             </div>
             <h4 className="font-sans font-bold text-base text-stone-900 leading-tight">
               {storeName}
             </h4>
+            {storeTagline && <p className="text-[11px] text-amber-700 font-sans font-medium">{storeTagline}</p>}
             <p className="text-xs text-stone-500 font-sans mt-0.5">{storeAddress}</p>
             <p className="text-xs text-stone-500 font-sans">Tel: {storePhone}</p>
+            {storeGSTIN && <p className="text-[10px] text-stone-400 font-mono mt-0.5">GSTIN: {storeGSTIN}</p>}
+            <div className="inline-block px-2 py-0.5 bg-stone-200/80 text-stone-700 rounded-md text-[10px] font-bold uppercase tracking-wider mt-1.5 font-sans">
+              {headerNote}
+            </div>
           </div>
 
           {/* Bill Meta */}
-          <div className="py-3 border-b border-dashed border-stone-300 text-xs space-y-1 font-sans">
+          <div className="py-2.5 border-b border-dashed border-stone-300 text-xs space-y-1 font-sans">
             <div className="flex justify-between">
               <span className="text-stone-500">Bill No:</span>
               <span className="font-semibold text-stone-800 font-mono">{bill.id}</span>
@@ -42,26 +57,30 @@ export function ReceiptModal({ isOpen, onClose, bill, storeSettings }) {
               <span className="text-stone-500">Date:</span>
               <span>{formatDate(bill.created_at)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-stone-500">Customer:</span>
-              <span className="font-medium text-stone-900">{bill.customer_name || 'Walk-in'}</span>
-            </div>
-            {bill.phone && (
-              <div className="flex justify-between">
-                <span className="text-stone-500">Phone:</span>
-                <span>{formatPhone(bill.phone)}</span>
-              </div>
+            {showCustomerInfo && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-stone-500">Customer:</span>
+                  <span className="font-medium text-stone-900">{bill.customer_name || 'Walk-in'}</span>
+                </div>
+                {bill.phone && (
+                  <div className="flex justify-between">
+                    <span className="text-stone-500">Phone:</span>
+                    <span>{formatPhone(bill.phone)}</span>
+                  </div>
+                )}
+                {bill.address && (
+                  <div className="flex justify-between">
+                    <span className="text-stone-500">Address:</span>
+                    <span className="text-right max-w-[180px] truncate">{bill.address}</span>
+                  </div>
+                )}
+              </>
             )}
-            {bill.address && (
-              <div className="flex justify-between">
-                <span className="text-stone-500">Address:</span>
-                <span className="text-right max-w-[200px] truncate">{bill.address}</span>
-              </div>
-            )}
             <div className="flex justify-between">
-              <span className="text-stone-500">Source:</span>
-              <span className="uppercase text-[11px] font-semibold text-amber-700">
-                {bill.feedback_source === 'self' ? 'Self-Checkout' : 'Counter POS'}
+              <span className="text-stone-500">Counter / Type:</span>
+              <span className="uppercase text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900">
+                {bill.feedback_source === 'self' ? 'Self-Checkout' : 'Cashier Counter'}
               </span>
             </div>
           </div>
@@ -78,27 +97,32 @@ export function ReceiptModal({ isOpen, onClose, bill, storeSettings }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {(bill.items || []).map((item, idx) => (
-                  <tr key={idx} className="py-1">
-                    <td className="py-1.5 font-medium text-stone-900 max-w-[130px] pr-1">
-                      {item.product_name}
-                      {bill.feedback !== 'none' && Number(item.discount_percent) > 0 && (
-                        <span className="block text-[10px] text-emerald-600 font-semibold">
-                          ({item.discount_percent}% off applied)
-                        </span>
-                      )}
-                    </td>
-                    <td className="text-center py-1.5 text-stone-600">
-                      {item.quantity} {item.unit}
-                    </td>
-                    <td className="text-right py-1.5 text-stone-600">
-                      ₹{item.unit_price}
-                    </td>
-                    <td className="text-right py-1.5 font-semibold text-stone-800">
-                      ₹{item.line_total}
-                    </td>
-                  </tr>
-                ))}
+                {(bill.items || []).map((item, idx) => {
+                  const hasFlatDisc = item.discount_type === 'flat' && Number(item.discount_flat) > 0;
+                  const hasPercentDisc = item.discount_type !== 'flat' && Number(item.discount_percent) > 0;
+
+                  return (
+                    <tr key={idx} className="py-1">
+                      <td className="py-1.5 font-medium text-stone-900 max-w-[130px] pr-1">
+                        {item.product_name}
+                        {showDiscounts && bill.feedback !== 'none' && (hasFlatDisc || hasPercentDisc) && (
+                          <span className="block text-[10px] text-emerald-600 font-semibold">
+                            ({hasFlatDisc ? `₹${item.discount_flat} off` : `${item.discount_percent}% off`})
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-center py-1.5 text-stone-600">
+                        {item.quantity} {item.unit}
+                      </td>
+                      <td className="text-right py-1.5 text-stone-600">
+                        ₹{item.unit_price}
+                      </td>
+                      <td className="text-right py-1.5 font-semibold text-stone-800">
+                        ₹{item.line_total}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -110,19 +134,14 @@ export function ReceiptModal({ isOpen, onClose, bill, storeSettings }) {
               <span className="font-semibold text-stone-800">{formatCurrency(bill.subtotal)}</span>
             </div>
 
-            {Number(bill.discount_amount) > 0 ? (
+            {Number(bill.discount_amount) > 0 && showDiscounts ? (
               <div className="flex justify-between text-emerald-600 font-medium">
                 <span className="flex items-center gap-1">
-                  <Sparkles size={12} /> {bill.feedback_source === 'staff' ? 'Counter Discount:' : 'Feedback Discount:'}
+                  <Sparkles size={12} /> {bill.feedback_source === 'staff' ? 'Counter Discount:' : 'Reward Discount:'}
                 </span>
                 <span>- {formatCurrency(bill.discount_amount)}</span>
               </div>
-            ) : (
-              <div className="flex justify-between text-stone-400 text-[11px]">
-                <span>Discount:</span>
-                <span>₹0 (None)</span>
-              </div>
-            )}
+            ) : null}
 
             <div className="flex justify-between text-base font-bold text-stone-950 pt-2 border-t border-stone-200">
               <span>Grand Total:</span>
@@ -131,62 +150,65 @@ export function ReceiptModal({ isOpen, onClose, bill, storeSettings }) {
           </div>
 
           {/* Payment & Feedback Info */}
-          <div className="pt-3 text-xs font-sans space-y-1">
-            <div className="flex justify-between">
-              <span className="text-stone-500">Payment Mode:</span>
-              <span className="font-semibold uppercase text-stone-800">
-                {bill.payment_method}
-              </span>
-            </div>
-
-            {bill.payment_method === 'cash' && bill.cash_given && (
-              <>
-                <div className="flex justify-between text-stone-600">
-                  <span>Cash Tendered:</span>
-                  <span>{formatCurrency(bill.cash_given)}</span>
-                </div>
-                <div className="flex justify-between text-emerald-700 font-bold">
-                  <span>Change Returned:</span>
-                  <span>{formatCurrency(bill.change_returned || 0)}</span>
-                </div>
-              </>
-            )}
-
-            <div className="flex justify-between items-center pt-2">
-              <span className="text-stone-500">Customer Feedback:</span>
-              {bill.feedback === 'good' ? (
-                <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold text-xs">
-                  <ThumbsUp size={12} /> Good Experience
+          {showPaymentMode && (
+            <div className="pt-2.5 text-xs font-sans space-y-1">
+              <div className="flex justify-between">
+                <span className="text-stone-500">Payment Mode:</span>
+                <span className="font-semibold uppercase text-stone-800">
+                  {bill.payment_method}
                 </span>
-              ) : bill.feedback === 'bad' ? (
-                <span className="inline-flex items-center gap-1 text-rose-600 font-semibold text-xs">
-                  <ThumbsDown size={12} /> Needs Improvement
-                </span>
-              ) : (
-                <span className="text-stone-400 text-xs">No feedback</span>
+              </div>
+
+              {bill.payment_method === 'cash' && bill.cash_given && (
+                <>
+                  <div className="flex justify-between text-stone-600">
+                    <span>Cash Tendered:</span>
+                    <span>{formatCurrency(bill.cash_given)}</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-700 font-bold">
+                    <span>Change Returned:</span>
+                    <span>{formatCurrency(bill.change_returned || 0)}</span>
+                  </div>
+                </>
+              )}
+
+              {bill.feedback && bill.feedback !== 'none' && (
+                <div className="flex justify-between items-center pt-1.5">
+                  <span className="text-stone-500">Feedback:</span>
+                  {bill.feedback === 'good' ? (
+                    <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold text-xs">
+                      <ThumbsUp size={12} /> Positive
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-amber-700 font-semibold text-xs">
+                      <ThumbsDown size={12} /> Needs Improvement
+                    </span>
+                  )}
+                </div>
               )}
             </div>
-          </div>
+          )}
 
           {/* Footer message */}
-          <div className="mt-4 pt-3 text-center border-t border-dashed border-stone-300 text-[11px] text-stone-400 font-sans">
-            <p>Thank you for supporting pure &amp; organic produce!</p>
-            <p className="font-medium text-amber-800/80">www.shivamroyoils.in</p>
-          </div>
+          {footerNote && (
+            <div className="mt-3.5 pt-2.5 text-center border-t border-dashed border-stone-300 text-[11px] text-stone-500 font-sans">
+              <p>{footerNote}</p>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons (Excluded from print) */}
         <div className="flex items-center gap-3 w-full mt-5 no-print">
           <button
             onClick={handlePrint}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-stone-900 hover:bg-stone-800 text-white rounded-2xl font-semibold shadow-md transition-all active:scale-98"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-stone-900 hover:bg-stone-800 text-white rounded-2xl font-semibold shadow-md transition-all active:scale-98 cursor-pointer"
           >
             <Printer size={18} />
             Print Receipt
           </button>
           <button
             onClick={onClose}
-            className="px-5 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-2xl font-medium transition-colors"
+            className="px-5 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-2xl font-medium transition-colors cursor-pointer"
           >
             Close
           </button>

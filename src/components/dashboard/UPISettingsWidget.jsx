@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, QrCode, Save, CheckCircle2, Image as ImageIcon, Tag } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Settings, QrCode, Save, CheckCircle2, Image as ImageIcon, Tag, Upload } from 'lucide-react';
 import { DEFAULT_UPI_QR } from '../../services/db';
 
 export function UPISettingsWidget({ settings, onUpdateSettings }) {
@@ -11,6 +11,8 @@ export function UPISettingsWidget({ settings, onUpdateSettings }) {
   );
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(''); // '', 'uploading', 'done', 'error'
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (settings) {
@@ -42,6 +44,42 @@ export function UPISettingsWidget({ settings, onUpdateSettings }) {
 
   const handleResetDefaultQR = () => {
     setUpiQrUrl(DEFAULT_UPI_QR);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      setUploadStatus('error');
+      setTimeout(() => setUploadStatus(''), 3000);
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setUploadStatus('error');
+      setTimeout(() => setUploadStatus(''), 3000);
+      return;
+    }
+
+    setUploadStatus('uploading');
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setUpiQrUrl(event.target.result);
+      setUploadStatus('done');
+      setTimeout(() => setUploadStatus(''), 2500);
+    };
+    reader.onerror = () => {
+      setUploadStatus('error');
+      setTimeout(() => setUploadStatus(''), 3000);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset file input so the same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -108,7 +146,40 @@ export function UPISettingsWidget({ settings, onUpdateSettings }) {
               placeholder="https://... or data:image/svg+xml;..."
               className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-[11px] font-mono resize-none focus:outline-hidden focus:ring-1 focus:ring-amber-500"
             />
+
+            {/* Upload QR Image Button */}
+            <div className="flex items-center gap-2 mt-1.5">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="qr-file-upload"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl text-[11px] font-bold text-amber-800 transition-colors cursor-pointer"
+              >
+                <Upload size={13} />
+                <span>Upload QR Image</span>
+              </button>
+              <span className="text-[10px] text-stone-400">PNG, JPG, WebP · Max 2 MB</span>
+              {uploadStatus === 'uploading' && (
+                <span className="text-[10px] text-amber-600 font-semibold animate-pulse">Uploading...</span>
+              )}
+              {uploadStatus === 'done' && (
+                <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
+                  <CheckCircle2 size={11} /> Uploaded!
+                </span>
+              )}
+              {uploadStatus === 'error' && (
+                <span className="text-[10px] text-rose-500 font-semibold">Invalid file (check type/size)</span>
+              )}
+            </div>
           </div>
+
 
           {/* QR Preview Thumbnail */}
           <div className="flex items-center gap-3 p-2.5 bg-stone-50 rounded-2xl border border-stone-200">

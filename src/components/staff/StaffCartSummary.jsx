@@ -98,10 +98,10 @@ export function StaffCartSummary({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-3xl border border-stone-200 shadow-sm p-4 sm:p-5 overflow-hidden">
+    <div className="flex flex-col h-full bg-white rounded-3xl border border-stone-200 shadow-sm p-4 sm:p-5">
       
-      {/* Header with Clear Cart */}
-      <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+      {/* Pinned Header */}
+      <div className="flex items-center justify-between pb-3 border-b border-stone-100 shrink-0">
         <div className="flex items-center gap-2">
           <Receipt size={18} className="text-amber-600" />
           <h3 className="font-heading font-bold text-stone-900 text-sm sm:text-base">
@@ -112,7 +112,7 @@ export function StaffCartSummary({
           <button
             type="button"
             onClick={handleClearAll}
-            className="text-xs text-rose-600 hover:text-rose-800 font-semibold flex items-center gap-1 cursor-pointer"
+            className="text-xs text-rose-600 hover:text-rose-800 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
           >
             <Trash2 size={13} />
             <span>Clear</span>
@@ -120,248 +120,251 @@ export function StaffCartSummary({
         )}
       </div>
 
-      {/* Cart Items Scroll Area */}
-      <div className="flex-1 overflow-y-auto py-2 divide-y divide-stone-100 min-h-[140px] max-h-[200px]">
-        {cartItems.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-6 text-stone-400">
-            <span className="text-xs">No items added to counter cart.</span>
-            <span className="text-[11px] text-stone-300 mt-0.5">Click &quot;Add&quot; from the product catalog.</span>
-          </div>
-        ) : (
-          cartItems.map((item) => {
-            const original = inventory.find(p => p.id === item.id);
-            const maxStock = original?.stock_quantity || 999;
-            return (
-              <div key={item.id} className="py-2 flex items-center justify-between gap-2 text-xs">
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-stone-900 truncate">{item.product_name}</p>
-                  <p className="text-stone-400 text-[11px]">
-                    ₹{item.unit_price} × {item.quantity} {item.unit}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 bg-stone-100 p-0.5 rounded-lg border border-stone-200">
-                    <button
-                      type="button"
-                      onClick={() => onUpdateQty(original, -1)}
-                      className="w-5 h-5 flex items-center justify-center text-stone-700 hover:bg-white rounded cursor-pointer"
-                    >
-                      <Minus size={11} />
-                    </button>
-                    <span className="w-5 text-center font-bold text-stone-900">
-                      {item.quantity}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={item.quantity >= maxStock}
-                      onClick={() => onUpdateQty(original, 1)}
-                      className={`w-5 h-5 flex items-center justify-center rounded cursor-pointer ${
-                        item.quantity >= maxStock ? 'text-stone-300' : 'text-stone-700 hover:bg-white'
-                      }`}
-                    >
-                      <Plus size={11} />
-                    </button>
+      {/* Scrollable Body: Items + Discounts + Customer + Payment */}
+      <div className="flex-1 overflow-y-auto pr-1 space-y-3 min-h-0 my-2">
+        {/* Cart Items Section */}
+        <div className="divide-y divide-stone-100 min-h-[80px]">
+          {cartItems.length === 0 ? (
+            <div className="py-6 flex flex-col items-center justify-center text-center text-stone-400">
+              <span className="text-xs">No items added to counter cart.</span>
+              <span className="text-[11px] text-stone-300 mt-0.5">Click &quot;Add&quot; from the product catalog.</span>
+            </div>
+          ) : (
+            cartItems.map((item) => {
+              const original = inventory.find(p => p.id === item.id);
+              const maxStock = original?.stock_quantity || 999;
+              return (
+                <div key={item.id} className="py-2 flex items-center justify-between gap-2 text-xs">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-stone-900 truncate">{item.product_name}</p>
+                    <p className="text-stone-400 text-[11px]">
+                      ₹{item.unit_price} × {item.quantity} {item.unit}
+                    </p>
                   </div>
-                  <span className="w-16 text-right font-bold text-stone-900">
-                    {formatCurrency(item.line_total)}
+
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 bg-stone-100 p-0.5 rounded-lg border border-stone-200">
+                      <button
+                        type="button"
+                        onClick={() => onUpdateQty(original, -1)}
+                        className="w-5 h-5 flex items-center justify-center text-stone-700 hover:bg-white rounded cursor-pointer"
+                      >
+                        <Minus size={11} />
+                      </button>
+                      <span className="w-5 text-center font-bold text-stone-900">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={item.quantity >= maxStock}
+                        onClick={() => onUpdateQty(original, 1)}
+                        className={`w-5 h-5 flex items-center justify-center rounded cursor-pointer ${
+                          item.quantity >= maxStock ? 'text-stone-300' : 'text-stone-700 hover:bg-white'
+                        }`}
+                      >
+                        <Plus size={11} />
+                      </button>
+                    </div>
+                    <span className="w-16 text-right font-bold text-stone-900">
+                      {formatCurrency(item.line_total)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Staff Manual Discount Controls */}
+        <div className="p-2.5 bg-amber-50/40 rounded-2xl border border-amber-200/80 space-y-1.5 text-xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-stone-800 font-bold text-[11px]">
+              <Tag size={12} className="text-amber-600" />
+              <span>Staff Manual Discount</span>
+            </div>
+            <div className="flex items-center bg-stone-200/70 p-0.5 rounded-lg text-[10px] font-bold">
+              <button
+                type="button"
+                onClick={() => setDiscountType('percent')}
+                className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                  discountType === 'percent'
+                    ? 'bg-white text-stone-900 shadow-xs'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                % Percent
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiscountType('fixed')}
+                className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                  discountType === 'fixed'
+                    ? 'bg-white text-stone-900 shadow-xs'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                ₹ Fixed
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 font-bold text-xs">
+                {discountType === 'percent' ? '%' : '₹'}
+              </span>
+              <input
+                type="number"
+                min="0"
+                max={discountType === 'percent' ? 100 : subtotal}
+                step="any"
+                value={discountValue}
+                onChange={(e) => setDiscountValue(e.target.value)}
+                placeholder={discountType === 'percent' ? 'Discount % (e.g. 10)' : 'Discount in ₹ (e.g. 50)'}
+                className="w-full pl-6 pr-2 py-1.5 bg-white border border-stone-200 rounded-xl text-xs font-bold focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+              />
+            </div>
+            {discountValue !== '' && Number(discountValue) > 0 && (
+              <button
+                type="button"
+                onClick={() => setDiscountValue('')}
+                className="p-1.5 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                title="Clear Discount"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Discount Presets */}
+          <div className="flex items-center gap-1 overflow-x-auto pt-0.5">
+            <span className="text-[10px] text-stone-400 shrink-0 font-medium">Quick:</span>
+            {(discountType === 'percent' ? [5, 10, 15, 20] : [20, 50, 100, 200]).map((val) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setDiscountValue(String(val))}
+                className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer shrink-0 ${
+                  String(discountValue) === String(val)
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-100'
+                }`}
+              >
+                {discountType === 'percent' ? `${val}%` : `₹${val}`}
+              </button>
+            ))}
+            {discountValue !== '' && (
+              <button
+                type="button"
+                onClick={() => setDiscountValue('')}
+                className="px-1.5 py-0.5 rounded-lg text-[10px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Customer Info Inputs */}
+        <div className="space-y-2 py-1 border-t border-stone-100">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] font-bold uppercase text-stone-500 block mb-0.5">
+                Customer Name
+              </label>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                placeholder="Walk-in Customer"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase text-stone-500 block mb-0.5">
+                Phone (Optional)
+              </label>
+              <input
+                type="tel"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
+                maxLength={10}
+                className="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                placeholder="10-digit mobile"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Selector & Cash Calculator */}
+        <div className="space-y-2 pt-1 border-t border-stone-100">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('cash')}
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                paymentMethod === 'cash'
+                  ? 'bg-stone-900 text-white shadow-xs'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              <Banknote size={14} /> Cash
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('upi')}
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                paymentMethod === 'upi'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              <QrCode size={14} /> UPI
+            </button>
+          </div>
+
+          {paymentMethod === 'cash' && (
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={cashGiven}
+                  onChange={(e) => setCashGiven(e.target.value)}
+                  placeholder="Cash Tendered (₹)"
+                  className="flex-1 px-3 py-1.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-bold focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                />
+                <div className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl text-right shrink-0">
+                  <span className="text-[10px] text-emerald-700 block leading-tight font-medium">Change:</span>
+                  <span className="text-xs font-black text-emerald-800">
+                    {formatCurrency(changeReturned)}
                   </span>
                 </div>
               </div>
-            );
-          })
-        )}
-      </div>
 
-      {/* Staff Manual Discount Controls */}
-      <div className="p-2.5 bg-amber-50/40 rounded-2xl border border-amber-200/80 my-1 space-y-1.5 text-xs">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-stone-800 font-bold text-[11px]">
-            <Tag size={12} className="text-amber-600" />
-            <span>Staff Manual Discount</span>
-          </div>
-          <div className="flex items-center bg-stone-200/70 p-0.5 rounded-lg text-[10px] font-bold">
-            <button
-              type="button"
-              onClick={() => setDiscountType('percent')}
-              className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
-                discountType === 'percent'
-                  ? 'bg-white text-stone-900 shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900'
-              }`}
-            >
-              % Percent
-            </button>
-            <button
-              type="button"
-              onClick={() => setDiscountType('fixed')}
-              className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
-                discountType === 'fixed'
-                  ? 'bg-white text-stone-900 shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900'
-              }`}
-            >
-              ₹ Fixed
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 font-bold text-xs">
-              {discountType === 'percent' ? '%' : '₹'}
-            </span>
-            <input
-              type="number"
-              min="0"
-              max={discountType === 'percent' ? 100 : subtotal}
-              step="any"
-              value={discountValue}
-              onChange={(e) => setDiscountValue(e.target.value)}
-              placeholder={discountType === 'percent' ? 'Discount % (e.g. 10)' : 'Discount in ₹ (e.g. 50)'}
-              className="w-full pl-6 pr-2 py-1.5 bg-white border border-stone-200 rounded-xl text-xs font-bold focus:outline-hidden focus:ring-1 focus:ring-amber-500"
-            />
-          </div>
-          {discountValue !== '' && Number(discountValue) > 0 && (
-            <button
-              type="button"
-              onClick={() => setDiscountValue('')}
-              className="p-1.5 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-              title="Clear Discount"
-            >
-              <X size={13} />
-            </button>
-          )}
-        </div>
-
-        {/* Quick Discount Presets */}
-        <div className="flex items-center gap-1 overflow-x-auto pt-0.5">
-          <span className="text-[10px] text-stone-400 shrink-0 font-medium">Quick:</span>
-          {(discountType === 'percent' ? [5, 10, 15, 20] : [20, 50, 100, 200]).map((val) => (
-            <button
-              key={val}
-              type="button"
-              onClick={() => setDiscountValue(String(val))}
-              className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer shrink-0 ${
-                String(discountValue) === String(val)
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-100'
-              }`}
-            >
-              {discountType === 'percent' ? `${val}%` : `₹${val}`}
-            </button>
-          ))}
-          {discountValue !== '' && (
-            <button
-              type="button"
-              onClick={() => setDiscountValue('')}
-              className="px-1.5 py-0.5 rounded-lg text-[10px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
-            >
-              Reset
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Customer Info Inputs */}
-      <div className="space-y-2 py-2 border-t border-stone-100">
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] font-bold uppercase text-stone-500 block mb-0.5">
-              Customer Name
-            </label>
-            <input
-              type="text"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              className="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:outline-hidden focus:ring-1 focus:ring-amber-500"
-              placeholder="Walk-in Customer"
-            />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold uppercase text-stone-500 block mb-0.5">
-              Phone (Optional)
-            </label>
-            <input
-              type="tel"
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
-              maxLength={10}
-              className="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:outline-hidden focus:ring-1 focus:ring-amber-500"
-              placeholder="10-digit mobile"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Payment Selector & Cash Calculator */}
-      <div className="space-y-2 pt-2 border-t border-stone-100">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setPaymentMethod('cash')}
-            className={`flex-1 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-              paymentMethod === 'cash'
-                ? 'bg-stone-900 text-white shadow-xs'
-                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-            }`}
-          >
-            <Banknote size={14} /> Cash
-          </button>
-          <button
-            type="button"
-            onClick={() => setPaymentMethod('upi')}
-            className={`flex-1 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-              paymentMethod === 'upi'
-                ? 'bg-amber-600 text-white shadow-xs'
-                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-            }`}
-          >
-            <QrCode size={14} /> UPI
-          </button>
-        </div>
-
-        {paymentMethod === 'cash' && (
-          <div className="space-y-1.5 pt-1">
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                value={cashGiven}
-                onChange={(e) => setCashGiven(e.target.value)}
-                placeholder="Cash Tendered (₹)"
-                className="flex-1 px-3 py-1.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-bold focus:outline-hidden focus:ring-1 focus:ring-amber-500"
-              />
-              <div className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl text-right">
-                <span className="text-[10px] text-emerald-700 block leading-tight font-medium">Change:</span>
-                <span className="text-xs font-black text-emerald-800">
-                  {formatCurrency(changeReturned)}
-                </span>
+              {/* Quick cash pills */}
+              <div className="flex items-center gap-1 overflow-x-auto">
+                {[total, 100, 200, 500, 2000]
+                  .filter((v, i, a) => v >= total && a.indexOf(v) === i)
+                  .slice(0, 4)
+                  .map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => handleQuickCash(val)}
+                      className="px-2 py-0.5 bg-stone-100 hover:bg-stone-200 text-[10px] font-semibold text-stone-700 rounded-lg cursor-pointer transition-colors shrink-0"
+                    >
+                      {val === total ? 'Exact' : '₹' + val}
+                    </button>
+                  ))}
               </div>
             </div>
-
-            {/* Quick cash pills */}
-            <div className="flex items-center gap-1 overflow-x-auto">
-              {[total, 100, 200, 500, 2000]
-                .filter((v, i, a) => v >= total && a.indexOf(v) === i)
-                .slice(0, 4)
-                .map((val) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => handleQuickCash(val)}
-                    className="px-2 py-0.5 bg-stone-100 hover:bg-stone-200 text-[10px] font-semibold text-stone-700 rounded-lg cursor-pointer transition-colors shrink-0"
-                  >
-                    {val === total ? 'Exact' : '₹' + val}
-                  </button>
-                ))}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Bill Totals & Submit Print Action */}
-      <div className="pt-3 mt-2 border-t border-stone-200">
-        <div className="space-y-1 mb-3">
+      {/* Pinned Sticky Footer with Totals & Hoverable Submit Print Button */}
+      <div className="shrink-0 pt-3 border-t border-stone-200 bg-white">
+        <div className="space-y-1 mb-2.5">
           <div className="flex items-center justify-between text-xs text-stone-500">
             <span>Subtotal ({numItems} items):</span>
             <span className="font-semibold text-stone-800">{formatCurrency(subtotal)}</span>
@@ -391,14 +394,14 @@ export function StaffCartSummary({
           type="button"
           disabled={cartItems.length === 0 || submitting}
           onClick={handleSubmit}
-          className={`w-full py-3.5 px-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all ${
+          className={`w-full py-3.5 px-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all duration-200 ${
             cartItems.length > 0 && !submitting
-              ? 'bg-amber-600 hover:bg-amber-700 text-white cursor-pointer active:scale-98 shadow-amber-600/20'
+              ? 'bg-amber-600 hover:bg-amber-700 hover:shadow-lg hover:shadow-amber-600/30 hover:-translate-y-0.5 text-white cursor-pointer active:translate-y-0 active:scale-98 shadow-amber-600/20'
               : 'bg-stone-200 text-stone-400 cursor-not-allowed shadow-none'
           }`}
         >
-          <Printer size={17} />
-          <span>{submitting ? 'Generating...' : 'Complete & Print Bill'}</span>
+          <Printer size={17} className={submitting ? 'animate-bounce' : 'transition-transform group-hover:scale-110'} />
+          <span>{submitting ? 'Generating Receipt...' : 'Complete & Print Bill'}</span>
         </button>
       </div>
 

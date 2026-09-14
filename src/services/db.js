@@ -24,7 +24,21 @@ const SEED_SETTINGS = {
   phone: '+91 98765 01234',
   low_stock_threshold: 10,
   tax_rate: 0,
-  self_checkout_discount_enabled: true
+  self_checkout_discount_enabled: true,
+  // Receipt / Printing Template Customization
+  receipt_store_name: 'Shivam Roy Oils',
+  receipt_tagline: 'Farm-Fresh Cold Pressed Oils & Spices',
+  receipt_address: 'Shop 14, Kisan Mandi Complex, Ring Road',
+  receipt_phone: '+91 98765 01234',
+  receipt_gstin: '07AAAAA0000A1Z5',
+  receipt_header_note: 'Tax Invoice / Retail Bill',
+  receipt_footer_note: 'Thank you for supporting pure & organic produce! Visit again.',
+  receipt_show_customer_info: true,
+  receipt_show_discounts: true,
+  receipt_show_payment_mode: true,
+  receipt_show_qr: true,
+  receipt_paper_width: '80mm',
+  receipt_font_size: 'medium'
 };
 
 const SEED_INVENTORY = [];
@@ -46,6 +60,8 @@ const SEED_USERS = [
     username: 'admin',
     password: 'password123',
     role: 'admin',
+    email: 'admin@shivamroyoils.com',
+    phone: '+91 98765 01234',
     security_question: 'What is your favorite color?',
     security_answer: 'blue',
     created_at: new Date().toISOString()
@@ -79,11 +95,13 @@ export class LocalStorageDB {
     const existingSettings = LocalStorageDB.get(STORAGE_KEYS.SETTINGS, null);
     if (!existingSettings) {
       LocalStorageDB.set(STORAGE_KEYS.SETTINGS, SEED_SETTINGS);
-    } else if (existingSettings.self_checkout_discount_enabled === undefined) {
-      LocalStorageDB.set(STORAGE_KEYS.SETTINGS, {
-        ...existingSettings,
-        self_checkout_discount_enabled: true
-      });
+    } else {
+      // Merge new template settings if missing
+      const merged = { ...SEED_SETTINGS, ...existingSettings };
+      if (existingSettings.self_checkout_discount_enabled === undefined) {
+        merged.self_checkout_discount_enabled = true;
+      }
+      LocalStorageDB.set(STORAGE_KEYS.SETTINGS, merged);
     }
 
     if (!localStorage.getItem(STORAGE_KEYS.INVENTORY)) {

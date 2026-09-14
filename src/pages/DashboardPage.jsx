@@ -17,6 +17,8 @@ import { InventoryTable } from '../components/dashboard/InventoryTable';
 import { RecentBillsTable } from '../components/dashboard/RecentBillsTable';
 import { DataExportModal } from '../components/dashboard/DataExportModal';
 import { DataExportWidget } from '../components/dashboard/DataExportWidget';
+import { PrintTemplateCustomizer } from '../components/dashboard/PrintTemplateCustomizer';
+import { UserRolesAndSecurityWidget } from '../components/dashboard/UserRolesAndSecurityWidget';
 
 import { 
   LayoutDashboard, 
@@ -27,11 +29,14 @@ import {
   ShoppingBag,
   Store,
   RefreshCw,
-  Download
+  Download,
+  Printer,
+  ShieldCheck,
+  Users
 } from 'lucide-react';
 
 export function DashboardPage() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, usersList } = useAuth();
   const { 
     inventory, 
     bills, 
@@ -45,7 +50,7 @@ export function DashboardPage() {
     updateSettings 
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'inventory' | 'bills' | 'loyalty'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'inventory' | 'bills' | 'loyalty' | 'templates' | 'users'
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // If not logged in, redirect to login page
@@ -89,7 +94,7 @@ export function DashboardPage() {
 
         {/* Header Tabs & Actions */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="bg-white p-1 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-1 text-xs">
+          <div className="bg-white p-1 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-1 text-xs flex-wrap">
             <button
               type="button"
               onClick={() => setActiveTab('overview')}
@@ -99,7 +104,7 @@ export function DashboardPage() {
                   : 'text-stone-600 hover:text-stone-950 hover:bg-stone-100'
               }`}
             >
-              Overview &amp; Analytics
+              Overview
             </button>
             <button
               type="button"
@@ -132,7 +137,31 @@ export function DashboardPage() {
                   : 'text-stone-600 hover:text-stone-950 hover:bg-stone-100'
               }`}
             >
-              Customer Loyalty
+              Loyalty
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('templates')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                activeTab === 'templates'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-950 hover:bg-stone-100'
+              }`}
+            >
+              <Printer size={13} />
+              <span>Print Template</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('users')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                activeTab === 'users'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-950 hover:bg-stone-100'
+              }`}
+            >
+              <Users size={13} />
+              <span>Users &amp; Security</span>
             </button>
           </div>
 
@@ -144,7 +173,7 @@ export function DashboardPage() {
             title="Export store data to CSV or JSON"
           >
             <Download size={14} className="text-amber-400" />
-            <span>Export Data</span>
+            <span className="hidden sm:inline">Export</span>
           </button>
 
           <button
@@ -238,6 +267,23 @@ export function DashboardPage() {
       {activeTab === 'loyalty' && (
         <div className="space-y-6">
           <CustomerLoyaltyWidget customerData={customerLoyaltyData} />
+        </div>
+      )}
+
+      {/* TAB 5: PRINT TEMPLATE CUSTOMIZER */}
+      {activeTab === 'templates' && (
+        <div className="space-y-6">
+          <PrintTemplateCustomizer
+            settings={settings}
+            onUpdateSettings={updateSettings}
+          />
+        </div>
+      )}
+
+      {/* TAB 6: USERS, ROLES & SECURITY */}
+      {activeTab === 'users' && (
+        <div className="space-y-6">
+          <UserRolesAndSecurityWidget />
         </div>
       )}
 

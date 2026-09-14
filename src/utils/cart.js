@@ -22,10 +22,14 @@ export function cartSubtotal(items = []) {
  * Calculates total discount based on customer feedback state and admin toggle.
  * CRUCIAL LOGIC:
  * - isEnabled === false (Admin toggle OFF): Returns 0.
- * - Feedback 'good' or 'bad' (from self-checkout): Unlocks product-level discount_percent.
+ * - Feedback 'good' or 'bad' (from self-checkout): Unlocks product-level discount.
  * - Feedback 'none' (or staff counter checkout): Zero discount applied.
  * 
- * @param {Array<{ unit_price: number, quantity: number, discount_percent?: number }>} items
+ * Supports two discount types per item:
+ * - 'percent' (default): Uses discount_percent field (e.g. 8% off)
+ * - 'flat': Uses discount_flat field (e.g. ₹15 off per unit)
+ * 
+ * @param {Array<{ unit_price: number, quantity: number, discount_type?: string, discount_percent?: number, discount_flat?: number }>} items
  * @param {'good' | 'bad' | 'none'} [feedback='none']
  * @param {boolean} [isEnabled=true]
  * @returns {number} Total discount amount rounded to 2 decimal places
@@ -41,9 +45,20 @@ export function cartDiscount(items = [], feedback = 'none', isEnabled = true) {
   const discount = items.reduce((acc, item) => {
     const price = Number(item.unit_price) || 0;
     const qty = Number(item.quantity) || 0;
-    const pct = Number(item.discount_percent) || 0;
-    if (pct <= 0) return acc;
-    const itemDiscount = (price * (pct / 100)) * qty;
+    const type = item.discount_type || 'percent';
+
+    let itemDiscount = 0;
+    if (type === 'flat') {
+      const flatAmt = Number(item.discount_flat) || 0;
+      if (flatAmt <= 0) return acc;
+      // Flat discount per unit, capped at unit price
+      itemDiscount = Math.min(flatAmt, price) * qty;
+    } else {
+      // Percent discount (default)
+      const pct = Number(item.discount_percent) || 0;
+      if (pct <= 0) return acc;
+      itemDiscount = (price * (pct / 100)) * qty;
+    }
     return acc + itemDiscount;
   }, 0);
 
@@ -101,7 +116,7 @@ export function cartNumItems(items = []) {
 /**
  * Builds standard bill line items from cart items and inventory source
  * Ensures items match the Bill schema:
- * { product_id, product_name, unit, unit_price, quantity, line_total, discount_percent }
+ * { product_id, product_name, unit, unit_price, quantity, line_total, discount_type, discount_percent, discount_flat }
  * 
  * @param {Array<{ id: string, quantity: number }>} cartItems
  * @param {Array<Object>} inventoryList
@@ -132,7 +147,9 @@ export function buildBillItems(cartItems = [], inventoryList = []) {
         unit_price: unitPrice,
         quantity: quantity,
         line_total: lineTotal,
-        discount_percent: Number(product.discount_percent) || 0
+        discount_type: product.discount_type || 'percent',
+        discount_percent: Number(product.discount_percent) || 0,
+        discount_flat: Number(product.discount_flat) || 0
       };
     });
 }

@@ -8,7 +8,8 @@ import {
   AlertCircle,
   ShieldCheck,
   Sparkles,
-  Smartphone
+  Smartphone,
+  ExternalLink
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -24,6 +25,11 @@ export function Step3Payment({
 
   // Initial estimate total (without discount until step 4 feedback)
   const currentTotal = subtotal;
+
+  // Construct UPI deep link URL
+  const upiVpa = settings?.upi_vpa || 'shivamroyoils@upi';
+  const storeName = settings?.store_name || 'Shivam Roy Oils';
+  const upiDeepLink = `upi://pay?pa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(storeName)}&am=${currentTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Payment to ${storeName}`)}`;
 
   const handleCashGivenChange = (val) => {
     const num = parseFloat(val) || 0;
@@ -123,11 +129,24 @@ export function Step3Payment({
             <div className="space-y-1">
               <span className="text-xs text-stone-500 font-medium">Merchant UPI VPA:</span>
               <p className="text-sm font-mono font-bold text-stone-800 bg-white px-3 py-1 rounded-xl border border-stone-200 inline-block">
-                {settings?.upi_vpa || 'shivamroyoils@upi'}
+                {upiVpa}
               </p>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-stone-500 mt-4 bg-white/80 px-3 py-2 rounded-xl border border-stone-200">
+            {/* Pay via UPI App Deep Link */}
+            <a
+              href={upiDeepLink}
+              className="flex items-center justify-center gap-2 w-full mt-4 py-3 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold text-sm rounded-2xl shadow-md shadow-violet-600/20 active:scale-[0.98] transition-all"
+            >
+              <Smartphone size={18} />
+              <span>Pay ₹{currentTotal.toFixed(2)} via UPI App</span>
+              <ExternalLink size={14} />
+            </a>
+            <p className="text-[10px] text-stone-400 mt-1.5">
+              Opens Google Pay, PhonePe, Paytm or your default UPI app
+            </p>
+
+            <div className="flex items-center gap-2 text-xs text-stone-500 mt-3 bg-white/80 px-3 py-2 rounded-xl border border-stone-200">
               <Smartphone size={16} className="text-amber-600" />
               <span>Compatible with Google Pay, PhonePe, Paytm, BHIM &amp; Banking apps</span>
             </div>

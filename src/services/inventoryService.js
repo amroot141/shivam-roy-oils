@@ -48,7 +48,9 @@ export const inventoryService = {
       unit: product.unit || 'bottle',
       stock_quantity: Math.max(0, parseInt(product.stock_quantity, 10) || 0),
       unit_price: Math.max(0, parseFloat(product.unit_price) || 0),
-      discount_percent: Math.min(100, Math.max(0, parseFloat(product.discount_percent) || 0))
+      discount_type: product.discount_type === 'flat' ? 'flat' : 'percent',
+      discount_percent: Math.min(100, Math.max(0, parseFloat(product.discount_percent) || 0)),
+      discount_flat: Math.max(0, parseFloat(product.discount_flat) || 0)
     };
 
     if (!newProduct.product_name) {
@@ -89,7 +91,9 @@ export const inventoryService = {
       unit: updates.unit || current.unit,
       stock_quantity: updates.stock_quantity !== undefined ? Math.max(0, parseInt(updates.stock_quantity, 10)) : current.stock_quantity,
       unit_price: updates.unit_price !== undefined ? Math.max(0, parseFloat(updates.unit_price)) : current.unit_price,
-      discount_percent: updates.discount_percent !== undefined ? Math.min(100, Math.max(0, parseFloat(updates.discount_percent))) : current.discount_percent
+      discount_type: updates.discount_type !== undefined ? (updates.discount_type === 'flat' ? 'flat' : 'percent') : (current.discount_type || 'percent'),
+      discount_percent: updates.discount_percent !== undefined ? Math.min(100, Math.max(0, parseFloat(updates.discount_percent))) : current.discount_percent,
+      discount_flat: updates.discount_flat !== undefined ? Math.max(0, parseFloat(updates.discount_flat)) : (current.discount_flat || 0)
     };
 
     // Instant local save

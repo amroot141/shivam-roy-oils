@@ -35,7 +35,9 @@ export function InventoryTable({
     unit: 'bottle',
     stock_quantity: 20,
     unit_price: 150,
-    discount_percent: 10
+    discount_type: 'percent',
+    discount_percent: 10,
+    discount_flat: 0
   });
 
   const [formErrors, setFormErrors] = useState({});
@@ -52,7 +54,9 @@ export function InventoryTable({
       unit: 'bottle',
       stock_quantity: 20,
       unit_price: 150,
-      discount_percent: 10
+      discount_type: 'percent',
+      discount_percent: 10,
+      discount_flat: 0
     });
     setFormErrors({});
   };
@@ -69,7 +73,9 @@ export function InventoryTable({
       unit: prod.unit || 'bottle',
       stock_quantity: prod.stock_quantity,
       unit_price: prod.unit_price,
-      discount_percent: prod.discount_percent || 0
+      discount_type: prod.discount_type || 'percent',
+      discount_percent: prod.discount_percent || 0,
+      discount_flat: prod.discount_flat || 0
     });
     setFormErrors({});
   };
@@ -85,8 +91,17 @@ export function InventoryTable({
     if (formData.unit_price === '' || isNaN(formData.unit_price) || Number(formData.unit_price) <= 0) {
       errs.unit_price = 'Unit price must be greater than 0';
     }
-    if (formData.discount_percent < 0 || formData.discount_percent > 100) {
-      errs.discount_percent = 'Discount must be between 0% and 100%';
+    if (formData.discount_type === 'percent') {
+      if (formData.discount_percent < 0 || formData.discount_percent > 100) {
+        errs.discount_percent = 'Discount must be between 0% and 100%';
+      }
+    } else {
+      if (formData.discount_flat < 0) {
+        errs.discount_flat = 'Flat discount cannot be negative';
+      }
+      if (formData.discount_flat > Number(formData.unit_price)) {
+        errs.discount_flat = 'Flat discount cannot exceed unit price';
+      }
     }
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
@@ -96,23 +111,21 @@ export function InventoryTable({
     e.preventDefault();
     if (!validateForm()) return;
 
+    const productPayload = {
+      product_name: formData.product_name.trim(),
+      unit: formData.unit,
+      stock_quantity: parseInt(formData.stock_quantity, 10),
+      unit_price: parseFloat(formData.unit_price),
+      discount_type: formData.discount_type,
+      discount_percent: formData.discount_type === 'percent' ? (parseFloat(formData.discount_percent) || 0) : 0,
+      discount_flat: formData.discount_type === 'flat' ? (parseFloat(formData.discount_flat) || 0) : 0
+    };
+
     if (editingProduct) {
-      await onUpdateProduct(editingProduct.id, {
-        product_name: formData.product_name.trim(),
-        unit: formData.unit,
-        stock_quantity: parseInt(formData.stock_quantity, 10),
-        unit_price: parseFloat(formData.unit_price),
-        discount_percent: parseFloat(formData.discount_percent) || 0
-      });
+      await onUpdateProduct(editingProduct.id, productPayload);
       setEditingProduct(null);
     } else {
-      await onAddProduct({
-        product_name: formData.product_name.trim(),
-        unit: formData.unit,
-        stock_quantity: parseInt(formData.stock_quantity, 10),
-        unit_price: parseFloat(formData.unit_price),
-        discount_percent: parseFloat(formData.discount_percent) || 0
-      });
+      await onAddProduct(productPayload);
       setIsAddModalOpen(false);
     }
     resetForm();
@@ -269,15 +282,20 @@ export function InventoryTable({
                       </div>
                     </td>
 
-                    {/* Feedback Discount % */}
+                    {/* Feedback Discount */}
                     <td className="py-3 px-3 text-center">
-                      {Number(product.discount_percent) > 0 ? (
+                      {((product.discount_type || 'percent') === 'flat' && Number(product.discount_flat) > 0) ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          <Sparkles size={11} className="text-emerald-600" />
+                          <span>₹{product.discount_flat} OFF</span>
+                        </span>
+                      ) : Number(product.discount_percent) > 0 ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
                           <Sparkles size={11} className="text-amber-600" />
                           <span>{product.discount_percent}% OFF</span>
                         </span>
                       ) : (
-                        <span className="text-stone-400 font-medium">0% (None)</span>
+                        <span className="text-stone-400 font-medium">None</span>
                       )}
                     </td>
 
@@ -402,27 +420,83 @@ export function InventoryTable({
 
             <div>
               <label className="text-[10px] font-bold uppercase text-stone-600 block mb-1">
-                Feedback Discount (%)
+                Feedback Discount
               </label>
-              <input
-                type="number"
-                step="1"
-                min="0"
-                max="100"
-                value={formData.discount_percent}
-                onChange={(e) => setFormData({ ...formData, discount_percent: e.target.value })}
-                className={`w-full px-3 py-2 bg-stone-50 border rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 ${
-                  formErrors.discount_percent ? 'border-rose-400' : 'border-stone-200'
-                }`}
-              />
-              {formErrors.discount_percent && (
-                <p className="text-rose-500 text-[11px] mt-1">{formErrors.discount_percent}</p>
+
+              {/* Discount Type Toggle */}
+              <div className="grid grid-cols-2 gap-1 p-1 bg-stone-100 rounded-xl mb-2">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, discount_type: 'percent' })}
+                  className={`py-1.5 rounded-lg text-[11px] font-bold text-center transition-all cursor-pointer ${
+                    formData.discount_type === 'percent'
+                      ? 'bg-white text-amber-800 shadow-xs'
+                      : 'text-stone-500 hover:text-stone-700'
+                  }`}
+                >
+                  % Percent
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, discount_type: 'flat' })}
+                  className={`py-1.5 rounded-lg text-[11px] font-bold text-center transition-all cursor-pointer ${
+                    formData.discount_type === 'flat'
+                      ? 'bg-white text-emerald-800 shadow-xs'
+                      : 'text-stone-500 hover:text-stone-700'
+                  }`}
+                >
+                  ₹ Flat Amount
+                </button>
+              </div>
+
+              {/* Discount Value Input */}
+              {formData.discount_type === 'percent' ? (
+                <>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      max="100"
+                      value={formData.discount_percent}
+                      onChange={(e) => setFormData({ ...formData, discount_percent: e.target.value })}
+                      placeholder="e.g. 10"
+                      className={`w-full px-3 py-2 pr-8 bg-stone-50 border rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 ${
+                        formErrors.discount_percent ? 'border-rose-400' : 'border-stone-200'
+                      }`}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 font-bold text-xs">%</span>
+                  </div>
+                  {formErrors.discount_percent && (
+                    <p className="text-rose-500 text-[11px] mt-1">{formErrors.discount_percent}</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 font-bold text-xs">₹</span>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={formData.discount_flat}
+                      onChange={(e) => setFormData({ ...formData, discount_flat: e.target.value })}
+                      placeholder="e.g. 15"
+                      className={`w-full pl-7 pr-3 py-2 bg-stone-50 border rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 ${
+                        formErrors.discount_flat ? 'border-rose-400' : 'border-stone-200'
+                      }`}
+                    />
+                  </div>
+                  {formErrors.discount_flat && (
+                    <p className="text-rose-500 text-[11px] mt-1">{formErrors.discount_flat}</p>
+                  )}
+                </>
               )}
             </div>
           </div>
 
           <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
-            <strong>Note on Feedback Discount:</strong> This discount will ONLY be triggered when customers submit self-checkout feedback. Counter staff sales apply 0% discount.
+            <strong>Note on Feedback Discount:</strong> This discount ({formData.discount_type === 'percent' ? 'percentage off' : 'flat ₹ off per unit'}) will ONLY be triggered when customers submit self-checkout feedback. Counter staff sales apply no item-level discount.
           </div>
 
           {/* Submit */}
