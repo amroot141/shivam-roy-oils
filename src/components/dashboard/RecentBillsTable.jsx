@@ -10,18 +10,153 @@ import {
   QrCode,
   ExternalLink,
   Download,
-  Tag
+  Tag,
+  Trash2,
+  AlertTriangle,
+  Lock,
+  X,
+  ShieldCheck
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatPhone } from '../../utils/formatters';
 import { FeedbackBadge } from '../common/Badge';
 import { ReceiptModal } from '../common/ReceiptModal';
 import { exportHelper } from '../../utils/exportHelper';
+import { useAuth } from '../../context/AuthContext';
 
-export function RecentBillsTable({ bills = [], storeSettings }) {
+// ── Delete Bill Confirmation Modal ────────────────────────────────────────────
+function DeleteBillModal({ bill, onConfirm, onClose }) {
+  const { getUsers } = useAuth();
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  if (!bill) return null;
+
+  const handleDelete = async () => {
+    if (!password.trim()) {
+      setError('Please enter your admin password.');
+      return;
+    }
+    setError('');
+    setDeleting(true);
+
+    // Verify admin password against any admin-role user
+    const users = getUsers();
+    const adminUser = users.find(u => u.role === 'admin' && u.password === password.trim());
+    if (!adminUser) {
+      setDeleting(false);
+      setError('Incorrect admin password. Access denied.');
+      return;
+    }
+
+    await onConfirm(bill.id);
+    setDeleting(false);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/60 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md border border-stone-200 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-stone-100 bg-red-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center">
+              <Trash2 size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-stone-900 text-base">Delete Bill</h3>
+              <p className="text-xs text-stone-500">This action cannot be undone</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-stone-200 text-stone-500 transition-colors cursor-pointer">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Bill Summary */}
+          <div className="bg-stone-50 rounded-2xl p-4 border border-stone-200 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-stone-500 font-medium">Bill No.</span>
+              <span className="font-mono font-bold text-stone-900">{bill.id}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-stone-500 font-medium">Customer</span>
+              <span className="font-bold text-stone-900">{bill.customer_name || 'Walk-in'}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-stone-500 font-medium">Date</span>
+              <span className="font-medium text-stone-700">{formatDate(bill.created_at)}</span>
+            </div>
+            <div className="flex justify-between text-sm border-t border-stone-200 pt-2 mt-2">
+              <span className="text-stone-500 font-medium">Total Amount</span>
+              <span className="font-black text-stone-900">{formatCurrency(bill.total_amount)}</span>
+            </div>
+          </div>
+
+          {/* Warning */}
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+            <AlertTriangle size={16} className="text-amber-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-amber-800 font-medium">
+              This bill will be permanently deleted from sales records and cannot be restored. Stock levels will not be adjusted.
+            </p>
+          </div>
+
+          {/* Admin Password */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
+              <Lock size={12} className="text-stone-500" />
+              Admin Password to Confirm
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => { setPassword(e.target.value); setError(''); }}
+              onKeyDown={e => e.key === 'Enter' && handleDelete()}
+              placeholder="Enter admin password..."
+              autoFocus
+              className="w-full px-3.5 py-2.5 text-sm border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500 bg-stone-50"
+            />
+            {error && (
+              <p className="text-xs text-red-600 font-semibold flex items-center gap-1">
+                <ShieldCheck size={12} />
+                {error}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 px-5 pb-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 text-sm font-bold text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-2xl transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-2xl transition-colors cursor-pointer disabled:opacity-60"
+          >
+            <Trash2 size={14} />
+            {deleting ? 'Deleting...' : 'Delete Bill'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+export function RecentBillsTable({ bills = [], storeSettings, onDeleteBill }) {
   const [search, setSearch] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [feedbackFilter, setFeedbackFilter] = useState('all');
   const [selectedBill, setSelectedBill] = useState(null);
+  const [billToDelete, setBillToDelete] = useState(null);
 
   const filteredBills = bills.filter(bill => {
     const term = search.toLowerCase();
@@ -140,7 +275,7 @@ export function RecentBillsTable({ bills = [], storeSettings }) {
               <th className="py-3 px-3 text-right">Total Paid</th>
               <th className="py-3 px-3 text-center">Payment</th>
               <th className="py-3 px-3 text-center">Feedback</th>
-              <th className="py-3 px-4 text-right">Receipt</th>
+              <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
@@ -224,17 +359,29 @@ export function RecentBillsTable({ bills = [], storeSettings }) {
                     <FeedbackBadge feedback={bill.feedback} size="sm" />
                   </td>
 
-                  {/* Action: View & Print Receipt */}
+                  {/* Actions: View & Delete */}
                   <td className="py-3 px-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedBill(bill)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-stone-100 hover:bg-stone-900 hover:text-white text-stone-700 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-                      title="View & Print Bill"
-                    >
-                      <Eye size={13} />
-                      <span>View</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBill(bill)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-stone-100 hover:bg-stone-900 hover:text-white text-stone-700 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                        title="View & Print Bill"
+                      >
+                        <Eye size={13} />
+                        <span>View</span>
+                      </button>
+                      {onDeleteBill && (
+                        <button
+                          type="button"
+                          onClick={() => setBillToDelete(bill)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded-xl text-xs font-semibold transition-all cursor-pointer border border-red-200 hover:border-red-600"
+                          title="Delete this bill"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -251,6 +398,14 @@ export function RecentBillsTable({ bills = [], storeSettings }) {
         storeSettings={storeSettings}
       />
 
+      {/* Delete Confirmation Modal */}
+      {billToDelete && (
+        <DeleteBillModal
+          bill={billToDelete}
+          onConfirm={onDeleteBill}
+          onClose={() => setBillToDelete(null)}
+        />
+      )}
     </div>
   );
 }

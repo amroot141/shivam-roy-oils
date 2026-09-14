@@ -47,7 +47,8 @@ export function DashboardPage() {
     updateProduct, 
     deleteProduct, 
     adjustStock, 
-    updateSettings 
+    updateSettings,
+    deleteBill
   } = useStore();
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'inventory' | 'bills' | 'loyalty' | 'templates' | 'users'
@@ -224,6 +225,7 @@ export function DashboardPage() {
 
             <StoreQRWidget
               storeSettings={settings}
+              onUpdateSettings={updateSettings}
             />
 
             <UPISettingsWidget
@@ -236,6 +238,7 @@ export function DashboardPage() {
           <RecentBillsTable
             bills={bills}
             storeSettings={settings}
+            onDeleteBill={deleteBill}
           />
         </div>
       )}
@@ -259,6 +262,7 @@ export function DashboardPage() {
           <RecentBillsTable
             bills={bills}
             storeSettings={settings}
+            onDeleteBill={deleteBill}
           />
         </div>
       )}

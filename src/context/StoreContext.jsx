@@ -77,6 +77,12 @@ export function StoreProvider({ children }) {
     return res;
   };
 
+  const handleDeleteBill = async (id) => {
+    const res = await billService.deleteBill(id);
+    setBills(prev => prev.filter(b => b.id !== id));
+    return res;
+  };
+
   const handleAdjustStock = async (id, delta) => {
     const updated = await inventoryService.adjustStock(id, delta);
     setInventory(prev => prev.map(p => p.id === id ? updated : p));
@@ -106,6 +112,7 @@ export function StoreProvider({ children }) {
         error,
         refresh: () => loadData(false),
         createBill: handleCreateBill,
+        deleteBill: handleDeleteBill,
         addProduct: handleAddProduct,
         updateProduct: handleUpdateProduct,
         deleteProduct: handleDeleteProduct,

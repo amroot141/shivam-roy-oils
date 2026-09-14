@@ -1,6 +1,6 @@
 import { LocalStorageDB, STORAGE_KEYS } from './db';
 import { inventoryService } from './inventoryService';
-import { db, collection, doc, getDocs, setDoc, query, orderBy, withTimeout } from './firebase';
+import { db, collection, doc, getDocs, setDoc, deleteDoc, query, orderBy, withTimeout } from './firebase';
 
 /**
  * Bill / Transaction Service
@@ -92,5 +92,23 @@ export const billService = {
   async getRecentBills(limit = 50) {
     const bills = await this.getBills();
     return bills.slice(0, limit);
+  },
+
+  /**
+   * Deletes a bill by ID from local cache and Firestore.
+   * @param {string} id
+   * @returns {Promise<boolean>}
+   */
+  async deleteBill(id) {
+    const bills = LocalStorageDB.get(STORAGE_KEYS.BILLS, []);
+    const updated = bills.filter(b => b.id !== id);
+    LocalStorageDB.set(STORAGE_KEYS.BILLS, updated);
+
+    // Non-blocking Firestore delete in background
+    deleteDoc(doc(db, 'bills', id)).catch(err =>
+      console.warn('Firestore bill delete queued locally:', err.message)
+    );
+
+    return true;
   }
 };

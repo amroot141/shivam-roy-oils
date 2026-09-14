@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, QrCode, Save, CheckCircle2, Image as ImageIcon, Tag, Upload } from 'lucide-react';
+import { Settings, QrCode, Save, CheckCircle2, Image as ImageIcon, Tag, Upload, Smartphone, Copy, ExternalLink, Check, Link } from 'lucide-react';
 import { DEFAULT_UPI_QR } from '../../services/db';
 
 export function UPISettingsWidget({ settings, onUpdateSettings }) {
@@ -12,7 +12,21 @@ export function UPISettingsWidget({ settings, onUpdateSettings }) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(''); // '', 'uploading', 'done', 'error'
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Build the UPI deep link from current form values
+  const upiDeepLink = upiVpa.trim()
+    ? `upi://pay?pa=${encodeURIComponent(upiVpa.trim())}&pn=${encodeURIComponent(storeName.trim() || 'Store')}&cu=INR&tn=${encodeURIComponent(`Payment to ${storeName.trim() || 'Store'}`)}`
+    : '';
+
+  const handleCopyLink = () => {
+    if (!upiDeepLink) return;
+    navigator.clipboard.writeText(upiDeepLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
 
   useEffect(() => {
     if (settings) {
@@ -120,9 +134,60 @@ export function UPISettingsWidget({ settings, onUpdateSettings }) {
               type="text"
               value={upiVpa}
               onChange={(e) => setUpiVpa(e.target.value)}
-              placeholder="e.g. storename@upi"
+              placeholder="e.g. storename@upi or 9876501234@paytm"
               className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono font-bold focus:outline-hidden focus:ring-1 focus:ring-amber-500"
             />
+          </div>
+
+          {/* UPI Deep Link Preview & Test */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold uppercase text-stone-500 flex items-center gap-1">
+                <Link size={11} />
+                UPI App Deep Link (Auto-Generated)
+              </label>
+              {upiDeepLink && (
+                <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">Active</span>
+              )}
+            </div>
+
+            {upiDeepLink ? (
+              <>
+                {/* Copyable link field */}
+                <div className="flex items-center gap-1.5">
+                  <input
+                    readOnly
+                    value={upiDeepLink}
+                    className="flex-1 px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-[10px] font-mono text-stone-600 truncate focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-[10px] font-bold transition-colors cursor-pointer shrink-0"
+                  >
+                    {copied ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+
+                {/* Test / Open link button */}
+                <a
+                  href={upiDeepLink}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm shadow-violet-500/20 transition-all active:scale-[0.98] cursor-pointer"
+                >
+                  <Smartphone size={14} />
+                  <span>Test: Open UPI App (Google Pay / PhonePe / Paytm)</span>
+                  <ExternalLink size={11} />
+                </a>
+                <p className="text-[10px] text-stone-400 text-center">
+                  This link is shown to customers on the self-checkout payment screen. Save settings to apply changes.
+                </p>
+              </>
+            ) : (
+              <div className="text-[11px] text-stone-400 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2">
+                Enter a UPI VPA above to generate the merchant deep link.
+              </div>
+            )}
           </div>
 
           {/* UPI Static QR Code Image Link */}
