@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Printer, 
   Settings2, 
@@ -9,7 +9,9 @@ import {
   Sparkles, 
   Store, 
   FileText,
-  HelpCircle
+  HelpCircle,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { printThermalReceipt } from '../../utils/printer';
@@ -21,6 +23,10 @@ export function PrintTemplateCustomizer({ settings, onUpdateSettings }) {
     receipt_address: settings?.receipt_address || settings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road',
     receipt_phone: settings?.receipt_phone || settings?.phone || '+91 98765 01234',
     receipt_gstin: settings?.receipt_gstin || '07AAAAA0000A1Z5',
+    receipt_fssai_no: settings?.receipt_fssai_no || settings?.fssai_no || '10020051000123',
+    receipt_msme_no: settings?.receipt_msme_no || settings?.msme_no || 'UDYAM-DL-00-1234567',
+    receipt_logo_url: settings?.receipt_logo_url || settings?.store_logo_url || '',
+    receipt_show_logo: settings?.receipt_show_logo !== false,
     receipt_header_note: settings?.receipt_header_note || 'Tax Invoice / Retail Bill',
     receipt_footer_note: settings?.receipt_footer_note || 'Thank you for supporting pure & organic produce! Visit again.',
     receipt_show_customer_info: settings?.receipt_show_customer_info !== false,
@@ -31,6 +37,39 @@ export function PrintTemplateCustomizer({ settings, onUpdateSettings }) {
 
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [logoUploadStatus, setLogoUploadStatus] = useState('');
+  const fileInputRef = useRef(null);
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/jpg', 'image/svg+xml'];
+    if (!validTypes.includes(file.type)) {
+      setLogoUploadStatus('error');
+      setTimeout(() => setLogoUploadStatus(''), 3000);
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoUploadStatus('error');
+      setTimeout(() => setLogoUploadStatus(''), 3000);
+      return;
+    }
+
+    setLogoUploadStatus('uploading');
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      handleChange('receipt_logo_url', event.target.result);
+      setLogoUploadStatus('done');
+      setTimeout(() => setLogoUploadStatus(''), 2500);
+    };
+    reader.onerror = () => {
+      setLogoUploadStatus('error');
+      setTimeout(() => setLogoUploadStatus(''), 3000);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -206,6 +245,90 @@ export function PrintTemplateCustomizer({ settings, onUpdateSettings }) {
                   placeholder="e.g. 07AAAAA0000A1Z5"
                 />
               </div>
+
+              <div>
+                <label className="text-xs font-bold text-stone-700 block mb-1">
+                  Food License Number (FSSAI)
+                </label>
+                <input
+                  type="text"
+                  value={formData.receipt_fssai_no}
+                  onChange={(e) => handleChange('receipt_fssai_no', e.target.value)}
+                  className="w-full px-3.5 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                  placeholder="e.g. 10020051000123"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-stone-700 block mb-1">
+                  MSME Registration Number
+                </label>
+                <input
+                  type="text"
+                  value={formData.receipt_msme_no}
+                  onChange={(e) => handleChange('receipt_msme_no', e.target.value)}
+                  className="w-full px-3.5 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                  placeholder="e.g. UDYAM-DL-00-1234567"
+                />
+              </div>
+
+              {/* Logo Upload Section */}
+              <div className="sm:col-span-2 p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                    <ImageIcon size={14} className="text-amber-600" />
+                    <span>Store Logo for Printed Receipts</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-stone-700">
+                    <input
+                      type="checkbox"
+                      checked={formData.receipt_show_logo}
+                      onChange={(e) => handleChange('receipt_show_logo', e.target.checked)}
+                      className="w-4 h-4 text-amber-600 rounded border-stone-300 focus:ring-amber-500"
+                    />
+                    <span>Enable Logo on Receipt</span>
+                  </label>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 items-center">
+                  <input
+                    type="text"
+                    value={formData.receipt_logo_url}
+                    onChange={(e) => handleChange('receipt_logo_url', e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-[11px] font-mono focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                    placeholder="https://... or data:image/png..."
+                  />
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                    id="receipt-logo-file-upload"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                  >
+                    <Upload size={13} />
+                    <span>Upload Logo</span>
+                  </button>
+                </div>
+
+                {logoUploadStatus === 'uploading' && (
+                  <p className="text-[10px] text-amber-600 font-semibold animate-pulse">Uploading logo...</p>
+                )}
+                {logoUploadStatus === 'done' && (
+                  <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <CheckCircle2 size={11} /> Logo image uploaded!
+                  </p>
+                )}
+                {logoUploadStatus === 'error' && (
+                  <p className="text-[10px] text-rose-500 font-semibold">Invalid image file (PNG/JPG/WebP &le; 2MB)</p>
+                )}
+              </div>
             </div>
 
             <h3 className="font-heading font-bold text-stone-900 text-base flex items-center gap-2 pt-3 pb-2 border-b border-stone-100">
@@ -330,9 +453,17 @@ export function PrintTemplateCustomizer({ settings, onUpdateSettings }) {
             >
               {/* Header */}
               <div className="text-center pb-3 border-b border-dashed border-stone-300">
-                <div className="inline-flex items-center justify-center w-8 h-8 bg-amber-600 text-white rounded-xl mb-1 font-sans font-bold text-sm">
-                  {storeInitial}
-                </div>
+                {formData.receipt_show_logo && formData.receipt_logo_url ? (
+                  <img 
+                    src={formData.receipt_logo_url} 
+                    alt="Store Logo" 
+                    className="max-h-12 max-w-[140px] object-contain mx-auto mb-1.5" 
+                  />
+                ) : (
+                  <div className="inline-flex items-center justify-center w-8 h-8 bg-amber-600 text-white rounded-xl mb-1 font-sans font-bold text-sm">
+                    {storeInitial}
+                  </div>
+                )}
                 <h4 className="font-sans font-extrabold text-sm sm:text-base text-stone-900 leading-tight">
                   {formData.receipt_store_name || 'Store Name'}
                 </h4>
@@ -350,6 +481,16 @@ export function PrintTemplateCustomizer({ settings, onUpdateSettings }) {
                 {formData.receipt_gstin && (
                   <p className="text-[10px] text-stone-400 font-mono mt-0.5">
                     GSTIN: {formData.receipt_gstin}
+                  </p>
+                )}
+                {formData.receipt_fssai_no && (
+                  <p className="text-[10px] text-stone-500 font-mono mt-0.5">
+                    FSSAI Lic. No: {formData.receipt_fssai_no}
+                  </p>
+                )}
+                {formData.receipt_msme_no && (
+                  <p className="text-[10px] text-stone-500 font-mono mt-0.5">
+                    MSME Reg. No: {formData.receipt_msme_no}
                   </p>
                 )}
                 {formData.receipt_header_note && (

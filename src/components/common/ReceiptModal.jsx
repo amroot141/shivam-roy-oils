@@ -16,6 +16,10 @@ export function ReceiptModal({ isOpen, onClose, bill, storeSettings }) {
   const storePhone = storeSettings?.receipt_phone || storeSettings?.phone || '+91 98765 01234';
   const storeAddress = storeSettings?.receipt_address || storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
   const storeGSTIN = storeSettings?.receipt_gstin || '';
+  const storeFssaiNo = storeSettings?.receipt_fssai_no || storeSettings?.fssai_no || '';
+  const storeMsmeNo = storeSettings?.receipt_msme_no || storeSettings?.msme_no || '';
+  const receiptLogoUrl = storeSettings?.receipt_logo_url || storeSettings?.store_logo_url || '';
+  const showLogo = storeSettings?.receipt_show_logo !== false && !!receiptLogoUrl;
   const headerNote = storeSettings?.receipt_header_note || 'Tax Invoice / Retail Bill';
   const footerNote = storeSettings?.receipt_footer_note || 'Thank you for supporting pure & organic produce! Visit again.';
   const showCustomerInfo = storeSettings?.receipt_show_customer_info !== false;
@@ -33,9 +37,13 @@ export function ReceiptModal({ isOpen, onClose, bill, storeSettings }) {
         <div id="printable-receipt" className={`w-full bg-stone-50/70 border border-dashed border-stone-300 rounded-2xl p-5 text-stone-800 text-sm font-mono ${paperWidthClass}`}>
           {/* Store Brand Header */}
           <div className="text-center pb-3 border-b border-dashed border-stone-300">
-            <div className="inline-flex items-center justify-center w-9 h-9 bg-amber-600 text-white rounded-xl mb-1 font-sans font-bold shadow-xs">
-              {storeInitial}
-            </div>
+            {showLogo ? (
+              <img src={receiptLogoUrl} alt="Store Logo" className="max-h-12 max-w-[140px] object-contain mx-auto mb-1.5" />
+            ) : (
+              <div className="inline-flex items-center justify-center w-9 h-9 bg-amber-600 text-white rounded-xl mb-1 font-sans font-bold shadow-xs">
+                {storeInitial}
+              </div>
+            )}
             <h4 className="font-sans font-bold text-base text-stone-900 leading-tight">
               {storeName}
             </h4>
@@ -43,6 +51,8 @@ export function ReceiptModal({ isOpen, onClose, bill, storeSettings }) {
             <p className="text-xs text-stone-500 font-sans mt-0.5">{storeAddress}</p>
             <p className="text-xs text-stone-500 font-sans">Tel: {storePhone}</p>
             {storeGSTIN && <p className="text-[10px] text-stone-400 font-mono mt-0.5">GSTIN: {storeGSTIN}</p>}
+            {storeFssaiNo && <p className="text-[10px] text-stone-500 font-mono mt-0.5">FSSAI Lic. No: {storeFssaiNo}</p>}
+            {storeMsmeNo && <p className="text-[10px] text-stone-500 font-mono mt-0.5">MSME Reg. No: {storeMsmeNo}</p>}
             <div className="inline-block px-2 py-0.5 bg-stone-200/80 text-stone-700 rounded-md text-[10px] font-bold uppercase tracking-wider mt-1.5 font-sans">
               {headerNote}
             </div>

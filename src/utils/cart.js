@@ -205,9 +205,14 @@ export function buildUpiDeepLink(settings = {}, amount = 0) {
  */
 export function downloadBillReceipt(bill, storeSettings = {}) {
   if (!bill) return;
-  const storeName = storeSettings?.store_name || 'Shivam Roy Oils';
-  const address = storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
-  const phone = storeSettings?.phone || '+91 98765 01234';
+  const storeName = storeSettings?.receipt_store_name || storeSettings?.store_name || 'Shivam Roy Oils';
+  const address = storeSettings?.receipt_address || storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
+  const phone = storeSettings?.receipt_phone || storeSettings?.phone || '+91 98765 01234';
+  const gstin = storeSettings?.receipt_gstin || storeSettings?.gstin || '';
+  const fssaiNo = storeSettings?.receipt_fssai_no || storeSettings?.fssai_no || '';
+  const msmeNo = storeSettings?.receipt_msme_no || storeSettings?.msme_no || '';
+  const logoUrl = storeSettings?.receipt_logo_url || storeSettings?.store_logo_url || '';
+  const showLogo = storeSettings?.receipt_show_logo !== false && !!logoUrl;
   const billId = bill.id || `BILL-${Date.now()}`;
   const dateStr = bill.created_at ? new Date(bill.created_at).toLocaleString('en-IN') : new Date().toLocaleString('en-IN');
 
@@ -263,9 +268,13 @@ export function downloadBillReceipt(bill, storeSettings = {}) {
 <body>
   <div class="card">
     <div class="header">
+      ${showLogo ? `<img src="${logoUrl}" alt="Store Logo" style="max-height: 52px; max-width: 160px; object-fit: contain; margin-bottom: 6px; display: inline-block;" />` : ''}
       <h1 class="store-title">${storeName}</h1>
       <div class="store-info">${address}</div>
       <div class="store-info">Phone: ${phone}</div>
+      ${gstin ? `<div class="store-info" style="font-family: monospace;">GSTIN: ${gstin}</div>` : ''}
+      ${fssaiNo ? `<div class="store-info" style="font-family: monospace;">FSSAI Lic. No: ${fssaiNo}</div>` : ''}
+      ${msmeNo ? `<div class="store-info" style="font-family: monospace;">MSME Reg. No: ${msmeNo}</div>` : ''}
       <div class="bill-badge">${billId}</div>
     </div>
     <div class="meta">

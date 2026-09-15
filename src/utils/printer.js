@@ -24,6 +24,10 @@ export function generateThermalReceiptHTML({ bill, storeSettings = {} }) {
   const storePhone = storeSettings?.receipt_phone || storeSettings?.phone || '+91 98765 01234';
   const storeAddress = storeSettings?.receipt_address || storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
   const storeGSTIN = storeSettings?.receipt_gstin || '';
+  const storeFssaiNo = storeSettings?.receipt_fssai_no || storeSettings?.fssai_no || '';
+  const storeMsmeNo = storeSettings?.receipt_msme_no || storeSettings?.msme_no || '';
+  const receiptLogoUrl = storeSettings?.receipt_logo_url || storeSettings?.store_logo_url || '';
+  const showLogo = storeSettings?.receipt_show_logo !== false && !!receiptLogoUrl;
   const headerNote = storeSettings?.receipt_header_note || 'TAX INVOICE / RETAIL BILL';
   const footerNote = storeSettings?.receipt_footer_note || 'Thank you for supporting pure & organic produce! Visit again.';
   const showCustomerInfo = storeSettings?.receipt_show_customer_info !== false;
@@ -207,12 +211,20 @@ export function generateThermalReceiptHTML({ bill, storeSettings = {} }) {
   <div class="receipt-wrapper">
     <!-- Header -->
     <div class="text-center">
-      <div class="store-badge">${storeInitial}</div>
+      ${showLogo ? `
+        <div style="margin-bottom: 4px;">
+          <img src="${escapeHtml(receiptLogoUrl)}" alt="Store Logo" style="max-height: 48px; max-width: 140px; object-fit: contain; display: inline-block;" />
+        </div>
+      ` : `
+        <div class="store-badge">${storeInitial}</div>
+      `}
       <div class="store-name">${escapeHtml(storeName)}</div>
       ${storeTagline ? `<div class="store-tagline">${escapeHtml(storeTagline)}</div>` : ''}
       <div class="store-sub">${escapeHtml(storeAddress)}</div>
       <div class="store-sub">Tel: ${escapeHtml(storePhone)}</div>
       ${storeGSTIN ? `<div class="store-sub font-mono" style="font-size: 10px;">GSTIN: ${escapeHtml(storeGSTIN)}</div>` : ''}
+      ${storeFssaiNo ? `<div class="store-sub font-mono" style="font-size: 10px;">FSSAI Lic. No: ${escapeHtml(storeFssaiNo)}</div>` : ''}
+      ${storeMsmeNo ? `<div class="store-sub font-mono" style="font-size: 10px;">MSME Reg. No: ${escapeHtml(storeMsmeNo)}</div>` : ''}
       <div><span class="header-badge">${escapeHtml(headerNote)}</span></div>
     </div>
 

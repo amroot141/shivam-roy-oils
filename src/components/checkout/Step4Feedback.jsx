@@ -56,9 +56,14 @@ export function Step4Feedback({
     printThermalReceipt({ bill, storeSettings });
   };
 
-  const storeName = storeSettings?.store_name || 'Shivam Roy Oils';
-  const storeAddress = storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
-  const storePhone = storeSettings?.phone || '+91 98765 01234';
+  const storeName = storeSettings?.receipt_store_name || storeSettings?.store_name || 'Shivam Roy Oils';
+  const storeAddress = storeSettings?.receipt_address || storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
+  const storePhone = storeSettings?.receipt_phone || storeSettings?.phone || '+91 98765 01234';
+  const storeGSTIN = storeSettings?.receipt_gstin || '';
+  const storeFssaiNo = storeSettings?.receipt_fssai_no || storeSettings?.fssai_no || '';
+  const storeMsmeNo = storeSettings?.receipt_msme_no || storeSettings?.msme_no || '';
+  const receiptLogoUrl = storeSettings?.receipt_logo_url || storeSettings?.store_logo_url || '';
+  const showLogo = storeSettings?.receipt_show_logo !== false && !!receiptLogoUrl;
 
   if (submitting || !bill) {
     return (
@@ -183,6 +188,9 @@ export function Step4Feedback({
 
         {/* Store Title */}
         <div className="text-center pb-4 border-b border-dashed border-stone-300">
+          {showLogo && (
+            <img src={receiptLogoUrl} alt="Store Logo" className="max-h-12 max-w-[150px] object-contain mx-auto mb-2" />
+          )}
           <h3 className="font-heading font-extrabold text-lg text-stone-900">
             {storeName}
           </h3>
@@ -192,6 +200,21 @@ export function Step4Feedback({
           {storePhone && (
             <p className="text-[11px] text-stone-400 mt-0.5">
               Phone: {storePhone}
+            </p>
+          )}
+          {storeGSTIN && (
+            <p className="text-[10px] text-stone-400 font-mono mt-0.5">
+              GSTIN: {storeGSTIN}
+            </p>
+          )}
+          {storeFssaiNo && (
+            <p className="text-[10px] text-stone-500 font-mono mt-0.5">
+              FSSAI Lic. No: {storeFssaiNo}
+            </p>
+          )}
+          {storeMsmeNo && (
+            <p className="text-[10px] text-stone-500 font-mono mt-0.5">
+              MSME Reg. No: {storeMsmeNo}
             </p>
           )}
           <div className="inline-block bg-stone-100 text-stone-700 px-3 py-1 rounded-full text-xs font-mono font-bold mt-2">
