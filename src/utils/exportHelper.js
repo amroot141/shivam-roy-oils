@@ -210,7 +210,7 @@ export const exportHelper = {
    */
   exportFullBackup(inventory = [], bills = [], settings = {}) {
     const fullBackup = {
-      app: 'Shivam Roy Oils',
+      app: 'M/S SHIVAMROY OIL AND COMPANY',
       version: '1.0.0',
       exported_at: new Date().toISOString(),
       store_settings: settings,

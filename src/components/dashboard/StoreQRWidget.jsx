@@ -10,7 +10,7 @@ export function StoreQRWidget({ storeSettings, onUpdateSettings }) {
 
   // Local form state mirroring settings fields used on the poster
   const [form, setForm] = useState({
-    store_name: storeSettings?.store_name || 'Shivam Roy Oils',
+    store_name: storeSettings?.store_name || 'M/S SHIVAMROY OIL AND COMPANY',
     tagline: storeSettings?.tagline || 'Farm-Fresh Cold Pressed Oils & Spices',
     address: storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road',
     phone: storeSettings?.phone || '+91 98765 01234',
@@ -20,7 +20,7 @@ export function StoreQRWidget({ storeSettings, onUpdateSettings }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const storeName = form.store_name || 'Shivam Roy Oils';
+  const storeName = form.store_name || 'M/S SHIVAMROY OIL AND COMPANY';
   const storeTagline = form.tagline || 'Farm-Fresh Cold Pressed Oils & Spices';
   const storeAddress = form.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
   const storePhone = form.phone || '+91 98765 01234';
@@ -44,7 +44,7 @@ export function StoreQRWidget({ storeSettings, onUpdateSettings }) {
 
   const handleDiscard = () => {
     setForm({
-      store_name: storeSettings?.store_name || 'Shivam Roy Oils',
+      store_name: storeSettings?.store_name || 'M/S SHIVAMROY OIL AND COMPANY',
       tagline: storeSettings?.tagline || 'Farm-Fresh Cold Pressed Oils & Spices',
       address: storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road',
       phone: storeSettings?.phone || '+91 98765 01234',
@@ -348,7 +348,7 @@ export function StoreQRWidget({ storeSettings, onUpdateSettings }) {
           <div className="mt-3 space-y-3 bg-amber-50/60 border border-amber-200/60 rounded-2xl p-4">
             <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wider mb-1">Customize Poster Content</p>
             {[
-              { field: 'store_name', label: 'Store Name', placeholder: 'Shivam Roy Oils' },
+              { field: 'store_name', label: 'Store Name', placeholder: 'M/S SHIVAMROY OIL AND COMPANY' },
               { field: 'tagline', label: 'Tagline', placeholder: 'Farm-Fresh Cold Pressed Oils & Spices' },
               { field: 'address', label: 'Address', placeholder: 'Shop 14, Kisan Mandi Complex' },
               { field: 'phone', label: 'Phone Number', placeholder: '+91 98765 01234' },

@@ -45,17 +45,17 @@ export function Navbar() {
             <div className="flex items-center gap-3">
               <Link to="/" className="flex items-center gap-2.5 group">
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white font-bold shadow-md shadow-amber-500/20 group-hover:scale-105 transition-transform">
-                  <span className="font-heading text-xl">S</span>
+                  <span className="font-heading text-sm font-black">M/S</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-heading font-extrabold text-lg text-stone-900 tracking-tight leading-tight flex items-center gap-1">
-                    Shivam Roy<span className="text-amber-600"> Oils</span>
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 ml-1">
+                  <span className="font-heading font-extrabold text-sm sm:text-base text-stone-900 tracking-tight leading-tight flex items-center gap-1">
+                    M/S SHIVAMROY<span className="text-amber-600"> OIL &amp; CO.</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 ml-1 whitespace-nowrap">
                       POS
                     </span>
                   </span>
                   <span className="text-[11px] text-stone-400 font-medium hidden sm:inline-block">
-                    {settings?.store_name || 'Organic Provisions'}
+                    {settings?.store_name || 'M/S SHIVAMROY OIL AND COMPANY'}
                   </span>
                 </div>
               </Link>

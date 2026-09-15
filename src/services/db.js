@@ -16,9 +16,9 @@ const DEFAULT_UPI_QR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/20
 
 const SEED_SETTINGS = {
   id: 'settings_default',
-  store_name: 'Shivam Roy Oils',
+  store_name: 'M/S SHIVAMROY OIL AND COMPANY',
   tagline: 'Farm-Fresh Cold Pressed Oils & Spices',
-  upi_vpa: 'shivamroyoils@upi',
+  upi_vpa: 'shivamroyoilco@upi',
   upi_qr_image_url: DEFAULT_UPI_QR,
   address: 'Shop 14, Kisan Mandi Complex, Ring Road',
   phone: '+91 98765 01234',
@@ -27,7 +27,7 @@ const SEED_SETTINGS = {
   self_checkout_discount_enabled: true,
   custom_upi_deep_link: '',
   // Receipt / Printing Template Customization
-  receipt_store_name: 'Shivam Roy Oils',
+  receipt_store_name: 'M/S SHIVAMROY OIL AND COMPANY',
   receipt_tagline: 'Farm-Fresh Cold Pressed Oils & Spices',
   receipt_address: 'Shop 14, Kisan Mandi Complex, Ring Road',
   receipt_phone: '+91 98765 01234',
@@ -174,6 +174,12 @@ export class LocalStorageDB {
     } else {
       // Merge new template settings if missing
       const merged = { ...SEED_SETTINGS, ...existingSettings };
+      if (existingSettings.store_name === 'Shivam Roy Oils' || !existingSettings.store_name) {
+        merged.store_name = 'M/S SHIVAMROY OIL AND COMPANY';
+      }
+      if (existingSettings.receipt_store_name === 'Shivam Roy Oils' || !existingSettings.receipt_store_name) {
+        merged.receipt_store_name = 'M/S SHIVAMROY OIL AND COMPANY';
+      }
       if (existingSettings.self_checkout_discount_enabled === undefined) {
         merged.self_checkout_discount_enabled = true;
       }

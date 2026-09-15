@@ -18,7 +18,7 @@ import { printThermalReceipt } from '../../utils/printer';
 
 export function PrintTemplateCustomizer({ settings, onUpdateSettings }) {
   const [formData, setFormData] = useState({
-    receipt_store_name: settings?.receipt_store_name || settings?.store_name || 'Shivam Roy Oils',
+    receipt_store_name: settings?.receipt_store_name || settings?.store_name || 'M/S SHIVAMROY OIL AND COMPANY',
     receipt_tagline: settings?.receipt_tagline || settings?.tagline || 'Farm-Fresh Cold Pressed Oils & Spices',
     receipt_address: settings?.receipt_address || settings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road',
     receipt_phone: settings?.receipt_phone || settings?.phone || '+91 98765 01234',
@@ -190,7 +190,7 @@ export function PrintTemplateCustomizer({ settings, onUpdateSettings }) {
                   value={formData.receipt_store_name}
                   onChange={(e) => handleChange('receipt_store_name', e.target.value)}
                   className="w-full px-3.5 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-1 focus:ring-amber-500"
-                  placeholder="e.g. Shivam Roy Oils"
+                  placeholder="e.g. M/S SHIVAMROY OIL AND COMPANY"
                 />
               </div>
 

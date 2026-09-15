@@ -173,8 +173,8 @@ export function buildBillItems(cartItems = [], inventoryList = []) {
  * @returns {string} Fully resolved UPI URL
  */
 export function buildUpiDeepLink(settings = {}, amount = 0) {
-  const upiVpa = (settings?.upi_vpa || 'shivamroyoils@upi').trim();
-  const storeName = (settings?.store_name || 'Shivam Roy Oils').trim();
+  const upiVpa = (settings?.upi_vpa || 'shivamroyoilco@upi').trim();
+  const storeName = (settings?.store_name || 'M/S SHIVAMROY OIL AND COMPANY').trim();
   const formattedAmt = (Math.max(0, Number(amount) || 0)).toFixed(2);
 
   const customTemplate = (settings?.custom_upi_deep_link || '').trim();
@@ -205,7 +205,7 @@ export function buildUpiDeepLink(settings = {}, amount = 0) {
  */
 export function downloadBillReceipt(bill, storeSettings = {}) {
   if (!bill) return;
-  const storeName = storeSettings?.receipt_store_name || storeSettings?.store_name || 'Shivam Roy Oils';
+  const storeName = storeSettings?.receipt_store_name || storeSettings?.store_name || 'M/S SHIVAMROY OIL AND COMPANY';
   const address = storeSettings?.receipt_address || storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
   const phone = storeSettings?.receipt_phone || storeSettings?.phone || '+91 98765 01234';
   const gstin = storeSettings?.receipt_gstin || storeSettings?.gstin || '';

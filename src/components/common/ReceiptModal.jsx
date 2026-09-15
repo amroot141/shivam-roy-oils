@@ -11,7 +11,7 @@ export function ReceiptModal({ isOpen, onClose, bill, storeSettings }) {
     printThermalReceipt({ bill, storeSettings });
   };
 
-  const storeName = storeSettings?.receipt_store_name || storeSettings?.store_name || 'Shivam Roy Oils';
+  const storeName = storeSettings?.receipt_store_name || storeSettings?.store_name || 'M/S SHIVAMROY OIL AND COMPANY';
   const storeTagline = storeSettings?.receipt_tagline || storeSettings?.tagline || 'Farm-Fresh Cold Pressed Oils & Spices';
   const storePhone = storeSettings?.receipt_phone || storeSettings?.phone || '+91 98765 01234';
   const storeAddress = storeSettings?.receipt_address || storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';

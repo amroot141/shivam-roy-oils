@@ -19,7 +19,7 @@ export function CheckoutReceipt({ bill, storeSettings, onReset }) {
     printThermalReceipt({ bill, storeSettings });
   };
 
-  const storeName = storeSettings?.store_name || 'Shivam Roy Oils';
+  const storeName = storeSettings?.store_name || 'M/S SHIVAMROY OIL AND COMPANY';
 
   return (
     <div className="max-w-xl mx-auto py-6">

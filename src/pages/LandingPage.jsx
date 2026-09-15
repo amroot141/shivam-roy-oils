@@ -41,8 +41,8 @@ export function LandingPage() {
           <span>Pure Oils, Cold-Pressed Provisions &amp; Smart POS</span>
         </div>
 
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-stone-900 font-heading tracking-tight leading-tight">
-          Shivam Roy<span className="text-amber-600"> Oils</span>
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-stone-900 font-heading tracking-tight leading-tight">
+          M/S SHIVAMROY<span className="text-amber-600"> OIL AND COMPANY</span>
         </h1>
         <p className="text-lg sm:text-xl text-stone-600 font-medium mt-3 max-w-2xl mx-auto">
           Lightweight Point of Sale, Inventory Management, and Customer Self-Checkout built with dynamic feedback discounts.

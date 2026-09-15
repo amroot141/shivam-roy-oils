@@ -84,7 +84,7 @@ export function DataExportModal({
   ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Export Shivam Roy Oils Data" maxWidth="max-w-2xl">
+    <Modal isOpen={isOpen} onClose={onClose} title="Export M/S SHIVAMROY OIL AND COMPANY Data" maxWidth="max-w-2xl">
       <div className="space-y-5">
         
         <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 text-xs text-amber-900 leading-relaxed flex items-start gap-3">

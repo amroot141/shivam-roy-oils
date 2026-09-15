@@ -56,7 +56,7 @@ export function Step4Feedback({
     printThermalReceipt({ bill, storeSettings });
   };
 
-  const storeName = storeSettings?.receipt_store_name || storeSettings?.store_name || 'Shivam Roy Oils';
+  const storeName = storeSettings?.receipt_store_name || storeSettings?.store_name || 'M/S SHIVAMROY OIL AND COMPANY';
   const storeAddress = storeSettings?.receipt_address || storeSettings?.address || 'Shop 14, Kisan Mandi Complex, Ring Road';
   const storePhone = storeSettings?.receipt_phone || storeSettings?.phone || '+91 98765 01234';
   const storeGSTIN = storeSettings?.receipt_gstin || '';
