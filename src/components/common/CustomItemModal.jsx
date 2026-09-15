@@ -89,8 +89,8 @@ export function CustomItemModal({ isOpen, onClose, onAddCustomItem }) {
             </label>
             <input
               type="number"
-              step="0.5"
-              min="0.1"
+              step="any"
+              min="0.01"
               value={unitPrice}
               onChange={(e) => setUnitPrice(e.target.value)}
               placeholder="e.g. 210"

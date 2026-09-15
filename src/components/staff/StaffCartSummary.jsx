@@ -368,6 +368,8 @@ export function StaffCartSummary({
               <div className="flex items-center gap-2">
                 <input
                   type="number"
+                  step="any"
+                  min="0"
                   value={cashGiven}
                   onChange={(e) => setCashGiven(e.target.value)}
                   placeholder="Cash Tendered (₹)"

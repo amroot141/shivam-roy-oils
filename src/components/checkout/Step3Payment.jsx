@@ -169,6 +169,7 @@ export function Step3Payment({
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-500 font-bold">₹</span>
                 <input
                   type="number"
+                  step="any"
                   min={currentTotal}
                   value={paymentInfo.cash_given}
                   onChange={(e) => handleCashGivenChange(e.target.value)}

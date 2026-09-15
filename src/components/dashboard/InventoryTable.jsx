@@ -451,6 +451,7 @@ export function InventoryTable({
               </label>
               <input
                 type="number"
+                step="any"
                 min="0"
                 value={formData.stock_quantity}
                 onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
@@ -472,8 +473,8 @@ export function InventoryTable({
               </label>
               <input
                 type="number"
-                step="0.01"
-                min="0.1"
+                step="any"
+                min="0"
                 value={formData.unit_price}
                 onChange={(e) => setFormData({ ...formData, unit_price: e.target.value })}
                 className={`w-full px-3 py-2 bg-stone-50 border rounded-xl text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 ${
@@ -522,7 +523,7 @@ export function InventoryTable({
                   <div className="relative">
                     <input
                       type="number"
-                      step="1"
+                      step="any"
                       min="0"
                       max="100"
                       value={formData.discount_percent}
@@ -544,7 +545,7 @@ export function InventoryTable({
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 font-bold text-xs">₹</span>
                     <input
                       type="number"
-                      step="0.5"
+                      step="any"
                       min="0"
                       value={formData.discount_flat}
                       onChange={(e) => setFormData({ ...formData, discount_flat: e.target.value })}
