@@ -120,29 +120,29 @@ export function Step4Feedback({
               <ThumbsUp size={16} />
             </div>
             <div className="text-left">
-              <span className="block font-bold text-xs text-stone-900 leading-tight">Good Shopping</span>
+              <span className="block font-bold text-sm text-stone-900 leading-tight">Good</span>
               <span className="text-[10px] text-emerald-700 font-semibold">Positive</span>
             </div>
           </button>
 
-          {/* Constructive / Needs Work */}
+          {/* Bad Feedback */}
           <button
             type="button"
             onClick={() => handleFeedbackClick('bad')}
             className={`p-3.5 rounded-2xl border-2 flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
               feedback === 'bad'
-                ? 'border-amber-500 bg-amber-50/80 ring-4 ring-amber-500/20 shadow-sm scale-101'
-                : 'border-stone-200 hover:border-amber-300 hover:bg-amber-50/30'
+                ? 'border-rose-500 bg-rose-50/80 ring-4 ring-rose-500/20 shadow-sm scale-101'
+                : 'border-stone-200 hover:border-rose-300 hover:bg-rose-50/30'
             }`}
           >
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-              feedback === 'bad' ? 'bg-amber-600 text-white' : 'bg-stone-100 text-stone-600'
+              feedback === 'bad' ? 'bg-rose-600 text-white' : 'bg-stone-100 text-stone-600'
             }`}>
               <ThumbsDown size={16} />
             </div>
             <div className="text-left">
-              <span className="block font-bold text-xs text-stone-900 leading-tight">Needs Work</span>
-              <span className="text-[10px] text-amber-800 font-semibold">Constructive</span>
+              <span className="block font-bold text-sm text-stone-900 leading-tight">Bad</span>
+              <span className="text-[10px] text-rose-700 font-semibold">Negative</span>
             </div>
           </button>
         </div>
@@ -339,11 +339,11 @@ export function Step4Feedback({
             <span className="text-stone-400">Customer Feedback:</span>
             {feedback === 'good' ? (
               <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-                <ThumbsUp size={12} /> Positive
+                <ThumbsUp size={12} /> Good
               </span>
             ) : feedback === 'bad' ? (
-              <span className="inline-flex items-center gap-1 text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-full">
-                <ThumbsDown size={12} /> Constructive
+              <span className="inline-flex items-center gap-1 text-rose-800 font-bold bg-rose-50 px-2 py-0.5 rounded-full">
+                <ThumbsDown size={12} /> Bad
               </span>
             ) : (
               <span className="text-stone-400">Recorded</span>

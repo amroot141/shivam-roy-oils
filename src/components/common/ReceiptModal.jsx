@@ -188,11 +188,11 @@ export function ReceiptModal({ isOpen, onClose, bill, storeSettings }) {
                   <span className="text-stone-500">Feedback:</span>
                   {bill.feedback === 'good' ? (
                     <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold text-xs">
-                      <ThumbsUp size={12} /> Positive
+                      <ThumbsUp size={12} /> Good
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-amber-700 font-semibold text-xs">
-                      <ThumbsDown size={12} /> Needs Improvement
+                    <span className="inline-flex items-center gap-1 text-rose-700 font-semibold text-xs">
+                      <ThumbsDown size={12} /> Bad
                     </span>
                   )}
                 </div>

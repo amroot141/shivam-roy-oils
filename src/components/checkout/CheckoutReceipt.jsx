@@ -167,11 +167,11 @@ export function CheckoutReceipt({ bill, storeSettings, onReset }) {
             <span className="text-stone-400">Feedback Submitted:</span>
             {bill.feedback === 'good' ? (
               <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-                <ThumbsUp size={12} /> Positive
+                <ThumbsUp size={12} /> Good
               </span>
             ) : bill.feedback === 'bad' ? (
-              <span className="inline-flex items-center gap-1 text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-full">
-                <ThumbsDown size={12} /> Constructive
+              <span className="inline-flex items-center gap-1 text-rose-800 font-bold bg-rose-50 px-2 py-0.5 rounded-full">
+                <ThumbsDown size={12} /> Bad
               </span>
             ) : (
               <span className="text-stone-400">None</span>

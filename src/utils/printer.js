@@ -323,7 +323,7 @@ export function generateThermalReceiptHTML({ bill, storeSettings = {} }) {
       ${bill.feedback && bill.feedback !== 'none' ? `
         <div class="meta-row" style="margin-top: 4px;">
           <span class="meta-lbl">Customer Rating:</span>
-          <span class="meta-val">${bill.feedback === 'good' ? 'Positive (★ Highly Satisfied)' : 'Constructive Feedback'}</span>
+          <span class="meta-val">${bill.feedback === 'good' ? 'Good' : 'Bad'}</span>
         </div>
       ` : ''}
     ` : ''}

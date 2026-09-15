@@ -9,7 +9,7 @@ export function FeedbackBadge({ feedback = 'none', size = 'md' }) {
     return (
       <span className={`inline-flex items-center gap-1 font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full ${isSm ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs'}`}>
         <ThumbsUp size={iconSize} className="text-emerald-600" />
-        <span>Good Feedback</span>
+        <span>Good</span>
       </span>
     );
   }
@@ -18,7 +18,7 @@ export function FeedbackBadge({ feedback = 'none', size = 'md' }) {
     return (
       <span className={`inline-flex items-center gap-1 font-medium bg-rose-50 text-rose-700 border border-rose-200 rounded-full ${isSm ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs'}`}>
         <ThumbsDown size={iconSize} className="text-rose-600" />
-        <span>Bad Feedback</span>
+        <span>Bad</span>
       </span>
     );
   }
